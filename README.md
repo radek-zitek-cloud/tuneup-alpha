@@ -23,10 +23,13 @@ src/tuneup_alpha/       # Application source
   models.py             # Pydantic data models
   nsupdate.py           # Script builder + executor
   tui.py                # Textual-based dashboard
+  tui.tcss              # TUI styling
   cli.py                # Typer CLI entry point
 tests/                  # Pytest suite
 config/sample_config.yaml
 ```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed component documentation.
 
 ## Getting Started
 
