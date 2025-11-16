@@ -81,11 +81,13 @@ Remove `--dry-run` once you are satisfied with the generated script.
 ### Example 1: Managing a Simple Zone
 
 1. Initialize configuration:
+
    ```bash
    tuneup-alpha init
    ```
 
 2. Edit `~/.config/tuneup-alpha/config.yaml` to add your zone:
+
    ```yaml
    zones:
      - name: mysite.com
@@ -101,11 +103,13 @@ Remove `--dry-run` once you are satisfied with the generated script.
    ```
 
 3. Preview the changes:
+
    ```bash
    tuneup-alpha plan mysite.com
    ```
 
 4. Apply the changes:
+
    ```bash
    tuneup-alpha apply mysite.com --no-dry-run
    ```
@@ -119,6 +123,7 @@ tuneup-alpha tui
 ```
 
 Key bindings:
+
 - `a` - Add a new zone or record (depending on focus)
 - `e` - Edit the selected zone or record
 - `d` - Delete the selected zone or record
@@ -196,11 +201,13 @@ zones:
 ### Record Types
 
 **A Records**: Maps a hostname to an IPv4 address
+
 - `label`: The hostname (use `@` for the zone apex)
 - `value`: Must be a valid IPv4 address (e.g., `192.168.1.1`)
 - `ttl`: Time to live in seconds (minimum 60)
 
 **CNAME Records**: Creates an alias to another hostname
+
 - `label`: The alias hostname (cannot be `@`)
 - `value`: Target hostname or `@` for the zone apex
 - `ttl`: Time to live in seconds (minimum 60)

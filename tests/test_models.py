@@ -139,21 +139,32 @@ def test_record_label_validation() -> None:
     Record(label="www", type="A", value="1.2.3.4")
     Record(label="mail-server", type="A", value="1.2.3.4")
     Record(label="test_record", type="A", value="1.2.3.4")
+    Record(label="api.v1", type="A", value="1.2.3.4")
+    Record(label="svc-01.edge", type="A", value="1.2.3.4")
+    Record(label="node@cluster", type="A", value="1.2.3.4")
     Record(label="srv1", type="A", value="1.2.3.4")
+    Record(label="srv1.", type="A", value="1.2.3.4")
+    Record(label="multi.segment.", type="A", value="1.2.3.4")
 
     # Invalid labels
-    with pytest.raises(ValidationError, match="Invalid DNS label"):
+    with pytest.raises(ValidationError, match="cannot start or end with a hyphen"):
         Record(label="-invalid", type="A", value="1.2.3.4")
 
-    with pytest.raises(ValidationError, match="Invalid DNS label"):
+    with pytest.raises(ValidationError, match="cannot start or end with a hyphen"):
         Record(label="invalid-", type="A", value="1.2.3.4")
 
-    with pytest.raises(ValidationError, match="Invalid DNS label"):
-        Record(label="inv@lid", type="A", value="1.2.3.4")
+    with pytest.raises(ValidationError, match="empty segments"):
+        Record(label="invalid..label", type="A", value="1.2.3.4")
 
     # Label too long
     with pytest.raises(ValidationError, match="exceeds maximum length"):
         Record(label="a" * 64, type="A", value="1.2.3.4")
+
+    with pytest.raises(ValidationError, match="start with a dot"):
+        Record(label=".invalid", type="A", value="1.2.3.4")
+
+    with pytest.raises(ValidationError, match="start with a dot"):
+        Record(label=".", type="A", value="1.2.3.4")
 
 
 def test_record_cname_validation() -> None:
@@ -162,6 +173,7 @@ def test_record_cname_validation() -> None:
     Record(label="www", type="CNAME", value="example.com")
     Record(label="www", type="CNAME", value="example.com.")
     Record(label="www", type="CNAME", value="subdomain.example.com")
+    Record(label="www", type="CNAME", value="target.example.")
 
     # Invalid CNAME values
     with pytest.raises(ValidationError, match="Invalid hostname"):
@@ -169,3 +181,6 @@ def test_record_cname_validation() -> None:
 
     with pytest.raises(ValidationError, match="Invalid hostname"):
         Record(label="www", type="CNAME", value="invalid-.com")
+
+    with pytest.raises(ValidationError, match="Invalid hostname"):
+        Record(label="www", type="CNAME", value=".invalid.com")

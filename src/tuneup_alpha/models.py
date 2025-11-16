@@ -34,17 +34,33 @@ class Record(BaseModel):
     @classmethod
     def validate_label(cls, v: str) -> str:
         """Validate DNS label format."""
+
         if v == "@":
             return v
-        # DNS label can contain alphanumeric, hyphens, and underscores
-        # Must not start or end with hyphen
-        pattern = r"^[a-zA-Z0-9_]([a-zA-Z0-9_-]*[a-zA-Z0-9_])?$"
-        if not re.match(pattern, v):
-            raise ValueError(
-                f"Invalid DNS label '{v}'. Labels must contain only alphanumeric characters, hyphens, and underscores."
-            )
-        if len(v) > 63:
-            raise ValueError(f"DNS label '{v}' exceeds maximum length of 63 characters")
+
+        if v.startswith("."):
+            raise ValueError("DNS labels cannot start with a dot")
+
+        trimmed_value = v[:-1] if v.endswith(".") else v
+        if not trimmed_value:
+            raise ValueError("DNS labels must contain at least one character")
+
+        label_pattern = re.compile(r"^[A-Za-z0-9@_-]+$")
+
+        for part in trimmed_value.split("."):
+            if not part:
+                raise ValueError("DNS labels cannot contain empty segments (consecutive dots)")
+            if part.startswith("-") or part.endswith("-"):
+                raise ValueError("DNS label segments cannot start or end with a hyphen")
+            if len(part) > 63:
+                raise ValueError(
+                    f"DNS label segment '{part}' exceeds maximum length of 63 characters"
+                )
+            if not label_pattern.match(part):
+                raise ValueError(
+                    f"Invalid DNS label '{v}'. Labels may contain letters, digits, hyphens, dots, underscores, and '@'."
+                )
+
         return v
 
     @field_validator("value")

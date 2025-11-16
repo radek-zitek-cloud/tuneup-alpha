@@ -21,6 +21,19 @@ RecordFormResult = tuple[int | None, Record]
 class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
     """Modal dialog that captures the fields required to define or edit a zone."""
 
+    BINDINGS = [
+        Binding("tab", "focus_next_field", "Next field", show=False, priority=True),
+        Binding("shift+tab", "focus_previous_field", "Previous field", show=False, priority=True),
+    ]
+
+    _FIELD_IDS = [
+        "zone-name",
+        "zone-server",
+        "zone-key",
+        "zone-ttl",
+        "zone-notes",
+    ]
+
     def __init__(self, mode: Literal["add", "edit"], zone: Zone | None = None) -> None:
         super().__init__()
         self.mode = mode
@@ -81,8 +94,15 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
-    def on_input_submitted(self, _event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
-        self._submit()
+    def on_input_submitted(self, event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
+        if not self._focus_relative_input(1, wrap=False):
+            self._submit()
+
+    def action_focus_next_field(self) -> None:  # pragma: no cover - UI shortcut
+        self._focus_relative_input(1, wrap=True)
+
+    def action_focus_previous_field(self) -> None:  # pragma: no cover - UI shortcut
+        self._focus_relative_input(-1, wrap=True)
 
     def _submit(self) -> None:
         try:
@@ -129,9 +149,38 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         if self._error:
             self._error.update(f"[red]{message}[/red]")
 
+    def _focus_relative_input(self, delta: int, *, wrap: bool) -> bool:
+        focused = self.app.focused
+        current_id = focused.id if isinstance(focused, Input) else None
+        try:
+            index = self._FIELD_IDS.index(current_id) if current_id else None  # type: ignore[arg-type]
+        except ValueError:
+            index = None
+
+        if index is None:
+            target = 0 if delta > 0 else -1
+        else:
+            target = index + delta
+
+        if target < 0 or target >= len(self._FIELD_IDS):
+            if not wrap:
+                return False
+            target %= len(self._FIELD_IDS)
+
+        field_id = self._FIELD_IDS[target]
+        self.query_one(f"#{field_id}", Input).focus()
+        return True
+
 
 class RecordFormScreen(ModalScreen[RecordFormResult | None]):
     """Modal dialog for adding or editing a DNS record."""
+
+    BINDINGS = [
+        Binding("tab", "focus_next_field", "Next field", show=False, priority=True),
+        Binding("shift+tab", "focus_previous_field", "Previous field", show=False, priority=True),
+    ]
+
+    _FIELD_IDS = ["record-label", "record-type", "record-value", "record-ttl"]
 
     def __init__(
         self,
@@ -195,8 +244,15 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
-    def on_input_submitted(self, _event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
-        self._submit()
+    def on_input_submitted(self, event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
+        if not self._focus_relative_input(1, wrap=False):
+            self._submit()
+
+    def action_focus_next_field(self) -> None:  # pragma: no cover - UI shortcut
+        self._focus_relative_input(1, wrap=True)
+
+    def action_focus_previous_field(self) -> None:  # pragma: no cover - UI shortcut
+        self._focus_relative_input(-1, wrap=True)
 
     def _submit(self) -> None:
         try:
@@ -233,6 +289,28 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
     def _show_error(self, message: str) -> None:
         if self._error:
             self._error.update(f"[red]{message}[/red]")
+
+    def _focus_relative_input(self, delta: int, *, wrap: bool) -> bool:
+        focused = self.app.focused
+        current_id = focused.id if isinstance(focused, Input) else None
+        try:
+            index = self._FIELD_IDS.index(current_id) if current_id else None  # type: ignore[arg-type]
+        except ValueError:
+            index = None
+
+        if index is None:
+            target = 0 if delta > 0 else -1
+        else:
+            target = index + delta
+
+        if target < 0 or target >= len(self._FIELD_IDS):
+            if not wrap:
+                return False
+            target %= len(self._FIELD_IDS)
+
+        field_id = self._FIELD_IDS[target]
+        self.query_one(f"#{field_id}", Input).focus()
+        return True
 
 
 class ConfirmDeleteScreen(ModalScreen[bool]):
