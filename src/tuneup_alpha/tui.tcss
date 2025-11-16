@@ -1,0 +1,86 @@
+/* TuneUp Alpha TUI Stylesheet */
+
+Screen {
+    background: $surface;
+}
+
+Header {
+    background: $primary;
+    color: $text;
+    text-style: bold;
+}
+
+Footer {
+    background: $panel;
+}
+
+#zones-table {
+    height: 40%;
+    border: solid $primary;
+}
+
+#zones-separator {
+    color: $primary;
+    margin: 1 0;
+}
+
+#records-table {
+    height: 30%;
+    border: solid $secondary;
+}
+
+#records-separator {
+    color: $secondary;
+    margin: 1 0;
+}
+
+#zone-configuration {
+    height: auto;
+    padding: 1 2;
+    background: $panel;
+    border: solid $accent;
+}
+
+/* Modal dialogs */
+#zone-form-dialog,
+#record-form-dialog,
+#confirm-dialog,
+#confirm-record-dialog {
+    background: $surface;
+    border: thick $primary;
+    padding: 1 2;
+    width: 60;
+    height: auto;
+}
+
+#modal-title {
+    text-style: bold;
+    color: $primary;
+    margin-bottom: 1;
+}
+
+#modal-error {
+    color: $error;
+    margin-bottom: 1;
+}
+
+#modal-actions {
+    align: center middle;
+    margin-top: 1;
+}
+
+#modal-actions Button {
+    margin: 0 1;
+}
+
+Static {
+    margin-bottom: 1;
+}
+
+Input {
+    margin-bottom: 1;
+}
+
+Button {
+    min-width: 16;
+}

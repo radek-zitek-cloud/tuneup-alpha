@@ -74,7 +74,9 @@ class ConfigRepository:
         )
 
         if existing_index is not None and not overwrite:
-            raise ConfigError(f"Zone '{zone.name}' already exists. Use overwrite=True to replace it.")
+            raise ConfigError(
+                f"Zone '{zone.name}' already exists. Use overwrite=True to replace it."
+            )
 
         if existing_index is None:
             config.zones.append(zone)
@@ -111,9 +113,7 @@ class ConfigRepository:
             None,
         )
         if conflict_index is not None and conflict_index != current_index:
-            raise ConfigError(
-                f"Zone '{updated.name}' already exists. Choose a different name."
-            )
+            raise ConfigError(f"Zone '{updated.name}' already exists. Choose a different name.")
 
         config.zones[current_index] = updated
         self.save(config)
@@ -133,6 +133,7 @@ def sample_config() -> AppConfig:
                 records=[
                     Record(label="@", type="A", value="198.51.100.10", ttl=600),
                     Record(label="www", type="CNAME", value="@", ttl=300),
+                    Record(label="mail", type="A", value="198.51.100.20", ttl=300),
                 ],
             )
         ]
