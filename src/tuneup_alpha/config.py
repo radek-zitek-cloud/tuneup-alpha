@@ -133,6 +133,7 @@ def sample_config() -> AppConfig:
                 records=[
                     Record(label="@", type="A", value="198.51.100.10", ttl=600),
                     Record(label="www", type="CNAME", value="@", ttl=300),
+                    Record(label="mail", type="A", value="198.51.100.20", ttl=300),
                 ],
             )
         ]

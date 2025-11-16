@@ -20,7 +20,7 @@ def test_save_and_reload_roundtrip(tmp_path: Path) -> None:
 
     loaded = repo.load()
     assert loaded.zones[0].name == "example.com"
-    assert len(loaded.zones[0].records) == 2
+    assert len(loaded.zones[0].records) == 3
 
 
 def test_invalid_yaml_raises(tmp_path: Path) -> None:
