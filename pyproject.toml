@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tuneup-alpha"
+version = "0.1.0"
+description = "Dynamic DNS zone manager with a Textual TUI and nsupdate integration."
+readme = "README.md"
+authors = [{ name = "TuneUp Maintainers" }]
+requires-python = ">=3.11"
+dependencies = [
+    "textual>=0.58,<1.0",
+    "typer>=0.12,<1.0",
+    "pydantic>=2.6,<3.0",
+    "pyyaml>=6.0,<7.0",
+    "rich>=13.7,<14.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-cov>=5.0"
+]
+
+[project.scripts]
+tuneup-alpha = "tuneup_alpha.cli:app"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
