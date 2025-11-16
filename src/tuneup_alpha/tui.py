@@ -14,7 +14,6 @@ from textual.widgets import Button, DataTable, Footer, Header, Input, Rule, Stat
 from .config import ConfigError, ConfigRepository
 from .models import AppConfig, Record, Zone
 
-
 ZoneFormResult = tuple[str | None, Zone]
 RecordFormResult = tuple[int | None, Record]
 
@@ -62,9 +61,7 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
             )
             yield Static("Notes (optional)")
             notes_value = (
-                self._initial_zone.notes
-                if self._initial_zone and self._initial_zone.notes
-                else ""
+                self._initial_zone.notes if self._initial_zone and self._initial_zone.notes else ""
             )
             yield Input(
                 id="zone-notes",
@@ -84,7 +81,7 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
+    def on_input_submitted(self, _event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
         self._submit()
 
     def _submit(self) -> None:
@@ -198,7 +195,7 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
+    def on_input_submitted(self, _event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
         self._submit()
 
     def _submit(self) -> None:
@@ -287,7 +284,7 @@ class ConfirmRecordDeleteScreen(ModalScreen[bool]):
 class ZoneDashboard(App):
     """Simple Textual dashboard listing all configured zones."""
 
-    CSS_PATH = None
+    CSS_PATH = "tui.tcss"
     BINDINGS = [
         Binding("tab", "toggle_focus", "Toggle focus", priority=True),
         Binding("a", "add_entry", "Add zone/record"),
@@ -396,16 +393,12 @@ class ZoneDashboard(App):
         else:
             self._show_empty_details()
 
-    def on_data_table_row_highlighted(
-        self, event: DataTable.RowHighlighted
-    ) -> None:
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         table_id = getattr(event.control, "id", "")
         if table_id == "zones-table":
             self._update_details_for_row(event.cursor_row)
 
-    def on_data_table_row_selected(
-        self, event: DataTable.RowSelected
-    ) -> None:
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         table_id = getattr(event.control, "id", "")
         if table_id == "zones-table":
             self._update_details_for_row(event.cursor_row)
@@ -415,17 +408,13 @@ class ZoneDashboard(App):
         if self._config_details:
             self._config_details.update(self._format_config(zone))
 
-    def _update_details_for_row(
-        self, row_index: int, record_index: int | None = None
-    ) -> None:
+    def _update_details_for_row(self, row_index: int, record_index: int | None = None) -> None:
         if row_index < 0 or row_index >= len(self._config.zones):
             self._show_empty_details()
             return
         self._update_details(self._config.zones[row_index], record_index)
 
-    def _populate_records_table(
-        self, zone: Zone, record_index: int | None = None
-    ) -> None:
+    def _populate_records_table(self, zone: Zone, record_index: int | None = None) -> None:
         if not self._records_table:
             return
         previous_row = None
@@ -559,9 +548,7 @@ class ZoneDashboard(App):
             _on_confirm,
         )
 
-    def _handle_record_saved(
-        self, zone_name: str, payload: RecordFormResult | None
-    ) -> None:
+    def _handle_record_saved(self, zone_name: str, payload: RecordFormResult | None) -> None:
         if not payload:
             return
         index, record = payload
@@ -593,9 +580,7 @@ class ZoneDashboard(App):
         if self._focus_mode == "records" and self._records_table:
             self._records_table.focus()
 
-    def _handle_record_delete(
-        self, zone_name: str, record_index: int, confirmed: bool
-    ) -> None:
+    def _handle_record_delete(self, zone_name: str, record_index: int, confirmed: bool) -> None:
         if not confirmed:
             return
         zone = self._get_zone_by_name(zone_name)

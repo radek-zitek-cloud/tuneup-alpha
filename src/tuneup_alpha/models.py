@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
-
 
 RecordType = Literal["A", "CNAME"]
 RecordAction = Literal["create", "delete", "update"]
@@ -37,9 +36,7 @@ class Zone(BaseModel):
     name: str = Field(..., description="FQDN of the zone (example.com).")
     server: str = Field(..., description="Authoritative name server to target.")
     key_file: Path = Field(..., description="Path to the nsupdate key file.")
-    notes: Optional[str] = Field(
-        default=None, description="Human friendly metadata about the zone."
-    )
+    notes: str | None = Field(default=None, description="Human friendly metadata about the zone.")
     default_ttl: int = Field(3600, ge=60, description="Default TTL when not set.")
     records: list[Record] = Field(default_factory=list)
 
@@ -49,7 +46,7 @@ class RecordChange(BaseModel):
 
     action: RecordAction
     record: Record
-    previous: Optional[Record] = None
+    previous: Record | None = None
 
 
 class AppConfig(BaseModel):

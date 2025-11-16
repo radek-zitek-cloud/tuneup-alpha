@@ -8,7 +8,6 @@ TuneUp Alpha is a Python 3.11 toolbox for managing dynamic DNS zones through `ns
 - **Config-first workflow** – store zones, records, and key metadata as structured YAML that lives in source control.
 - **Interactive dashboard** – launch the Textual TUI to inspect zones, records, and metadata without leaving the terminal.
 - **In-app authoring** – press `a`, `e`, or `d` to add/edit/delete the selected zone; hit `Tab` to move into the record editor where the same shortcuts manage records.
-- **In-app authoring** – press `a` in the TUI to add a new zone without dropping back to a text editor.
 - **Automation ready** – CLI commands expose `plan`/`apply` operations that can be scripted inside CI or cron jobs.
 
 ## Project Layout

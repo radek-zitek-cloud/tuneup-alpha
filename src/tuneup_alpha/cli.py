@@ -13,6 +13,8 @@ from .models import RecordChange, Zone
 from .nsupdate import NsupdateClient, NsupdatePlan
 from .tui import run_dashboard
 
+__version__ = "0.1.0"
+
 app = typer.Typer(help="Manage dynamic DNS zones via nsupdate.")
 console = Console()
 
@@ -27,6 +29,12 @@ def init(
     repo = ConfigRepository(config_path)
     path = repo.ensure_sample(overwrite=overwrite)
     console.print(f"Configuration written to [bold]{path}[/bold]")
+
+
+@app.command()
+def version() -> None:
+    """Display the version of TuneUp Alpha."""
+    console.print(f"TuneUp Alpha version [bold]{__version__}[/bold]")
 
 
 @app.command()

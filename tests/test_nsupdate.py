@@ -16,7 +16,9 @@ def _zone() -> Zone:
 def test_plan_render_includes_records() -> None:
     zone = _zone()
     plan = NsupdatePlan(zone)
-    plan.add_change(RecordChange(action="create", record=Record(label="@", type="A", value="1.1.1.1")))
+    plan.add_change(
+        RecordChange(action="create", record=Record(label="@", type="A", value="1.1.1.1"))
+    )
     script = plan.render()
     assert "server ns1.example.com" in script
     assert "update add example.com." in script
