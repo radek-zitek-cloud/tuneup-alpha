@@ -29,9 +29,7 @@ def test_record_validation_label_required() -> None:
 
 
 def test_zone_defaults() -> None:
-    zone = Zone(
-        name="example.com", server="ns1.example.com", key_file=Path("/etc/key.key")
-    )
+    zone = Zone(name="example.com", server="ns1.example.com", key_file=Path("/etc/key.key"))
     assert zone.default_ttl == 3600
     assert zone.notes is None
     assert zone.records == []
@@ -88,9 +86,7 @@ def test_app_config_empty() -> None:
 
 
 def test_app_config_with_zones() -> None:
-    zone = Zone(
-        name="example.com", server="ns1.example.com", key_file=Path("/etc/key.key")
-    )
+    zone = Zone(name="example.com", server="ns1.example.com", key_file=Path("/etc/key.key"))
     config = AppConfig(zones=[zone])
     assert len(config.zones) == 1
     assert config.zones[0].name == "example.com"

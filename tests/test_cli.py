@@ -1,7 +1,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from tuneup_alpha.cli import app
@@ -39,9 +38,7 @@ def test_init_command_no_overwrite(tmp_path: Path) -> None:
 def test_init_command_with_overwrite(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yaml"
     config_path.write_text("old: data")
-    result = runner.invoke(
-        app, ["init", "--config-path", str(config_path), "--overwrite"]
-    )
+    result = runner.invoke(app, ["init", "--config-path", str(config_path), "--overwrite"])
     assert result.exit_code == 0
     assert config_path.exists()
     content = config_path.read_text()
@@ -76,9 +73,7 @@ def test_plan_command_zone_not_found(tmp_path: Path) -> None:
     repo = ConfigRepository(config_path)
     repo.save(repo.load())
 
-    result = runner.invoke(
-        app, ["plan", "nonexistent.com", "--config-path", str(config_path)]
-    )
+    result = runner.invoke(app, ["plan", "nonexistent.com", "--config-path", str(config_path)])
     assert result.exit_code == 2
     assert "not found" in result.stdout
 

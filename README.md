@@ -1,5 +1,9 @@
 # TuneUp Alpha
 
+[![CI](https://github.com/radek-zitek-cloud/tuneup-alpha/actions/workflows/ci.yml/badge.svg)](https://github.com/radek-zitek-cloud/tuneup-alpha/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
 TuneUp Alpha is a Python 3.11 toolbox for managing dynamic DNS zones through `nsupdate`. It ships with a Typer-powered CLI, a Textual TUI for live inspection, and a YAML-driven configuration system so you can script repeatable record changes.
 
 ## Feature Highlights
@@ -211,11 +215,33 @@ zones:
 
 ```bash
 pytest
+# or use make
+make test
 ```
 
-### Lint / Format (optional)
+### Run Tests with Coverage
 
-Add your preferred linters or formatters (e.g., Ruff, Black) and wire them into CI as the project evolves.
+```bash
+pytest --cov=tuneup_alpha --cov-report=term-missing
+# or use make
+make coverage
+```
+
+### Lint / Format
+
+```bash
+ruff check .
+ruff format .
+# or use make
+make lint
+make format
+```
+
+### Run All Checks
+
+```bash
+make check  # runs lint + test
+```
 
 ### Formatting Guidelines
 

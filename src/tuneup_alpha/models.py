@@ -72,9 +72,7 @@ class Record(BaseModel):
                 # Basic hostname validation
                 hostname_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.?$"
                 if not re.match(hostname_pattern, v):
-                    raise ValueError(
-                        f"Invalid hostname '{v}' for CNAME record"
-                    )
+                    raise ValueError(f"Invalid hostname '{v}' for CNAME record")
 
         return v
 
