@@ -41,7 +41,7 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         self,
         mode: Literal["add", "edit"],
         zone: Zone | None = None,
-        prefix_key_path: str = "/etc/nsupdate",
+        prefix_key_path: str = "~/.config/nsupdate",
     ) -> None:
         super().__init__()
         self.mode = mode
@@ -108,11 +108,17 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
-    def on_input_changed(self, event: Input.Changed) -> None:
-        """Handle input changes to perform DNS lookup when zone name changes."""
-        # Only perform DNS lookup on the zone name field
+    def on_input_changed(self, _event: Input.Changed) -> None:
+        """Handle input changes to clear error messages."""
+        # Clear error when user types
+        if self._error:
+            self._error.update("")
+
+    def on_input_blurred(self, event: Input.Blurred) -> None:
+        """Handle input blur to perform DNS lookup when zone name field loses focus."""
+        # Only perform DNS lookup on the zone name field when it loses focus
         if event.input.id == "zone-name":
-            self._perform_zone_lookup(event.value)
+            self._perform_zone_lookup(event.input.value)
 
     def _perform_zone_lookup(self, domain: str) -> None:
         """Perform DNS lookup for zone and update fields with discovered values.
@@ -570,6 +576,12 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
 class ConfirmDeleteScreen(ModalScreen[bool]):
     """Modal dialog asking the user to confirm zone removal."""
 
+    BINDINGS = [
+        Binding("tab", "focus_next_button", "Next button", show=False, priority=True),
+        Binding("shift+tab", "focus_previous_button", "Previous button", show=False, priority=True),
+        Binding("escape", "cancel", "Cancel", show=False, priority=True),
+    ]
+
     def __init__(self, zone_name: str) -> None:
         super().__init__()
         self.zone_name = zone_name
@@ -581,15 +593,41 @@ class ConfirmDeleteScreen(ModalScreen[bool]):
                 yield Button("Cancel", id="cancel")
                 yield Button("Delete", id="delete", variant="error")
 
+    def on_mount(self) -> None:
+        self.query_one("#cancel", Button).focus()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel":
             self.dismiss(False)
         elif event.button.id == "delete":
             self.dismiss(True)
 
+    def action_focus_next_button(self) -> None:  # pragma: no cover - UI shortcut
+        focused = self.app.focused
+        if focused and focused.id == "cancel":
+            self.query_one("#delete", Button).focus()
+        else:
+            self.query_one("#cancel", Button).focus()
+
+    def action_focus_previous_button(self) -> None:  # pragma: no cover - UI shortcut
+        focused = self.app.focused
+        if focused and focused.id == "delete":
+            self.query_one("#cancel", Button).focus()
+        else:
+            self.query_one("#delete", Button).focus()
+
+    def action_cancel(self) -> None:  # pragma: no cover - UI shortcut
+        self.dismiss(False)
+
 
 class ConfirmRecordDeleteScreen(ModalScreen[bool]):
     """Modal to confirm record deletion."""
+
+    BINDINGS = [
+        Binding("tab", "focus_next_button", "Next button", show=False, priority=True),
+        Binding("shift+tab", "focus_previous_button", "Previous button", show=False, priority=True),
+        Binding("escape", "cancel", "Cancel", show=False, priority=True),
+    ]
 
     def __init__(self, zone_name: str, record_label: str) -> None:
         super().__init__()
@@ -606,11 +644,31 @@ class ConfirmRecordDeleteScreen(ModalScreen[bool]):
                 yield Button("Cancel", id="cancel")
                 yield Button("Delete", id="delete", variant="error")
 
+    def on_mount(self) -> None:
+        self.query_one("#cancel", Button).focus()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel":
             self.dismiss(False)
         elif event.button.id == "delete":
             self.dismiss(True)
+
+    def action_focus_next_button(self) -> None:  # pragma: no cover - UI shortcut
+        focused = self.app.focused
+        if focused and focused.id == "cancel":
+            self.query_one("#delete", Button).focus()
+        else:
+            self.query_one("#cancel", Button).focus()
+
+    def action_focus_previous_button(self) -> None:  # pragma: no cover - UI shortcut
+        focused = self.app.focused
+        if focused and focused.id == "delete":
+            self.query_one("#cancel", Button).focus()
+        else:
+            self.query_one("#delete", Button).focus()
+
+    def action_cancel(self) -> None:  # pragma: no cover - UI shortcut
+        self.dismiss(False)
 
 
 class ZoneDashboard(App):
@@ -618,9 +676,10 @@ class ZoneDashboard(App):
 
     CSS_PATH = "tui.tcss"
     BINDINGS = [
-        # Disable default tab/shift+tab pane switching (use z/r instead)
-        Binding("tab", "noop", show=False, priority=True),
-        Binding("shift+tab", "noop", show=False, priority=True),
+        # Disable default tab/shift+tab pane switching in main app (use z/r instead)
+        # Note: Modal screens will override these with their own tab bindings
+        Binding("tab", "noop", show=False),
+        Binding("shift+tab", "noop", show=False),
         # Pane focus
         Binding("z", "focus_zones", "Focus zones"),
         Binding("r", "focus_records", "Focus records"),

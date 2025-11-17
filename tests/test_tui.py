@@ -8,7 +8,10 @@ from tuneup_alpha.tui import RecordFormScreen, ZoneDashboard, ZoneFormScreen
 
 
 def test_zone_dashboard_disables_tab_bindings() -> None:
-    """Test that tab and shift+tab bindings are disabled in the main dashboard."""
+    """Test that tab and shift+tab bindings are disabled in the main dashboard.
+
+    Note: priority is False to allow modal screens to override with their own tab bindings.
+    """
     dashboard = ZoneDashboard()
 
     # Check that tab and shift+tab bindings exist and point to noop action
@@ -18,7 +21,9 @@ def test_zone_dashboard_disables_tab_bindings() -> None:
 
     for binding in tab_bindings:
         assert binding.action == "noop", f"Binding {binding.key} should use 'noop' action"
-        assert binding.priority is True, f"Binding {binding.key} should have priority=True"
+        assert binding.priority is False, (
+            f"Binding {binding.key} should have priority=False to allow modal overrides"
+        )
         assert binding.show is False, f"Binding {binding.key} should not be shown in footer"
 
 
