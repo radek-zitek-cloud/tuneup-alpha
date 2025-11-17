@@ -68,12 +68,9 @@ Footer {
     margin: 0 1;
 }
 
-Static {
-    margin-bottom: 1;
-}
-
+/* Form inputs have minimal spacing for compact layout */
 Input {
-    margin-bottom: 1;
+    margin-bottom: 0;
 }
 
 Button {
