@@ -1,3 +1,4 @@
+prefix_key_path: /etc/nsupdate
 zones:
   - name: example.com
     server: ns1.example.com
