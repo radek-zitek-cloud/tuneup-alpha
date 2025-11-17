@@ -184,3 +184,20 @@ def test_record_cname_validation() -> None:
 
     with pytest.raises(ValidationError, match="Invalid hostname"):
         Record(label="www", type="CNAME", value=".invalid.com")
+
+
+def test_app_config_default_prefix_key_path() -> None:
+    config = AppConfig()
+    assert config.prefix_key_path == "/etc/nsupdate"
+
+
+def test_app_config_custom_prefix_key_path() -> None:
+    config = AppConfig(prefix_key_path="/custom/path/keys")
+    assert config.prefix_key_path == "/custom/path/keys"
+
+
+def test_app_config_with_prefix_key_path_and_zones() -> None:
+    zone = Zone(name="example.com", server="ns1.example.com", key_file=Path("/etc/key.key"))
+    config = AppConfig(zones=[zone], prefix_key_path="/etc/nsupdate")
+    assert config.prefix_key_path == "/etc/nsupdate"
+    assert len(config.zones) == 1
