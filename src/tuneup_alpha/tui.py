@@ -639,7 +639,6 @@ class ZoneDashboard(App):
     def _format_config(self, zone: Zone) -> str:
         lines = [
             "Zone configuration",
-            "",
             f"  Name: {zone.name}",
             f"  Server: {zone.server}",
             f"  Key File: {zone.key_file}",
@@ -648,7 +647,6 @@ class ZoneDashboard(App):
         ]
         if zone.notes:
             lines.append(f"  Notes: {zone.notes}")
-        lines.append("")
         return "\n".join(lines)
 
     def _show_empty_details(self) -> None:
@@ -657,7 +655,7 @@ class ZoneDashboard(App):
             self._records_table.clear()
         if self._config_details:
             self._config_details.update(
-                message + "\nZone configuration details will appear here once a zone is selected.\n"
+                message + "\nZone configuration details will appear here once a zone is selected."
             )
         self._focus_mode = "zones"
 
