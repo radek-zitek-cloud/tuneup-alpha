@@ -547,7 +547,7 @@ class ZoneDashboard(App):
         return "\n".join(lines)
 
     def _show_empty_details(self) -> None:
-        message = "No zones configured yet. Use `tuneup-alpha init` or press 'a' to add one."
+        message = "No zones configured yet. Use `tuneup-alpha init` or press 'z+a' to add one."
         if self._records_table:
             self._records_table.clear()
         if self._config_details:
