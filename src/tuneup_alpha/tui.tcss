@@ -54,6 +54,11 @@ Footer {
     margin-bottom: 1;
 }
 
+#modal-info {
+    margin-bottom: 1;
+    min-height: 1;
+}
+
 #modal-actions {
     align: center middle;
     margin-top: 1;

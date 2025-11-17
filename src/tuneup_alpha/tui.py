@@ -277,6 +277,10 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         if not value or not value.strip():
             return
 
+        # Show checking indicator
+        if self._info:
+            self._info.update("[yellow]⏳ Checking DNS...[/yellow]")
+
         # Perform DNS lookup
         suggested_type, lookup_result = dns_lookup(value.strip())
 
@@ -309,16 +313,16 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
             # User entered an IP address
             hostname = lookup_result.get("hostname")
             if hostname:
-                messages.append(f"[cyan]Reverse DNS: {hostname}[/cyan]")
+                messages.append(f"[green]✓[/green] [cyan]Reverse DNS: {hostname}[/cyan]")
             else:
-                messages.append("[dim]No reverse DNS found[/dim]")
+                messages.append("[yellow]○[/yellow] [dim]No reverse DNS found[/dim]")
         elif suggested_type == "CNAME":
             # User entered a hostname
             ip = lookup_result.get("ip")
             if ip:
-                messages.append(f"[cyan]Forward DNS: {ip}[/cyan]")
+                messages.append(f"[green]✓[/green] [cyan]Forward DNS: {ip}[/cyan]")
             else:
-                messages.append("[dim]No forward DNS found[/dim]")
+                messages.append("[yellow]○[/yellow] [dim]No forward DNS found[/dim]")
 
         if messages:
             self._info.update(" | ".join(messages))
