@@ -11,7 +11,7 @@ TuneUp Alpha is a Python 3.11 toolbox for managing dynamic DNS zones through `ns
 - **Dynamic plans** – build and optionally apply `nsupdate` scripts for each managed zone.
 - **Config-first workflow** – store zones, records, and key metadata as structured YAML that lives in source control.
 - **Interactive dashboard** – launch the Textual TUI to inspect zones, records, and metadata without leaving the terminal.
-- **In-app authoring** – use prefixed hotkeys (`z+a`/`z+e`/`z+d` for zones, `r+a`/`r+e`/`r+d` for records) to add, edit, or delete zones and records. Hit `Tab` to switch between zones and records view.
+- **In-app authoring** – press `z` to focus zones or `r` to focus records, then use `a`/`e`/`d` to add, edit, or delete items in the focused pane.
 - **Automation ready** – CLI commands expose `plan`/`apply` operations that can be scripted inside CI or cron jobs.
 
 ## Project Layout
@@ -60,7 +60,7 @@ This writes `~/.config/tuneup-alpha/config.yaml` if it does not already exist. U
 tuneup-alpha tui
 ```
 
-Inside the dashboard, use `z` followed by `a` to add a zone, `z+e` to edit the highlighted zone, or `z+d` to delete it (with confirmation). Press `Tab` to switch focus to the records view—while there, use `r+a`/`r+e`/`r+d` to add, modify, or remove individual DNS records. Press `Esc` to cancel any dialog, and `l` to reload the configuration from disk.
+Inside the dashboard, press `z` to focus the zones pane or `r` to focus the records pane. Once a pane is focused, use `a` to add, `e` to edit, or `d` to delete items in that pane. Press `Esc` to cancel any dialog, and `l` to reload the configuration from disk.
 
 ### Preview an nsupdate Script
 
@@ -124,21 +124,19 @@ tuneup-alpha tui
 
 Key bindings:
 
-Zone operations (prefix with `z`):
+Pane navigation:
 
-- `z` then `a` - Add a new zone
-- `z` then `e` - Edit the selected zone
-- `z` then `d` - Delete the selected zone
+- `z` - Focus the zones pane
+- `r` - Focus the records pane
 
-Record operations (prefix with `r`):
+Context-aware operations (work on the currently focused pane):
 
-- `r` then `a` - Add a new record
-- `r` then `e` - Edit the selected record
-- `r` then `d` - Delete the selected record
+- `a` - Add a new zone or record
+- `e` - Edit the selected zone or record
+- `d` - Delete the selected zone or record
 
 Other controls:
 
-- `Tab` - Switch between zones and records view
 - `l` - Reload configuration from disk
 - `Esc` - Cancel current form/dialog
 - `q` - Quit the application
