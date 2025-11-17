@@ -110,3 +110,21 @@ def test_update_zone_rename_conflict(tmp_path: Path) -> None:
                 key_file=tmp_path / "example.key",
             ),
         )
+
+
+def test_config_with_prefix_key_path(tmp_path: Path) -> None:
+    repo = ConfigRepository(tmp_path / "config.yaml")
+    config = AppConfig(prefix_key_path="/custom/keys")
+    repo.save(config)
+
+    loaded = repo.load()
+    assert loaded.prefix_key_path == "/custom/keys"
+
+
+def test_config_default_prefix_key_path(tmp_path: Path) -> None:
+    repo = ConfigRepository(tmp_path / "config.yaml")
+    config = AppConfig()
+    repo.save(config)
+
+    loaded = repo.load()
+    assert loaded.prefix_key_path == "/etc/nsupdate"

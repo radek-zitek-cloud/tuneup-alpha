@@ -17,7 +17,7 @@ from .dns_lookup import dns_lookup, dns_lookup_label, lookup_a_records, lookup_n
 from .models import AppConfig, Record, RecordType, Zone
 
 ZoneFormResult = tuple[str | None, Zone]
-RecordFormResult = tuple[int | None, Record]
+RecordFormResult = tuple[int | None, Record, str | None]  # (index, record, cname_target)
 
 
 class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
@@ -37,11 +37,17 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         "zone-notes",
     ]
 
-    def __init__(self, mode: Literal["add", "edit"], zone: Zone | None = None) -> None:
+    def __init__(
+        self,
+        mode: Literal["add", "edit"],
+        zone: Zone | None = None,
+        prefix_key_path: str = "/etc/nsupdate",
+    ) -> None:
         super().__init__()
         self.mode = mode
         self._initial_zone = zone
         self._original_name = zone.name if zone else None
+        self._prefix_key_path = prefix_key_path
         self._error: Static | None = None
         self._info: Static | None = None
         self._discovered_ns: list[str] = []
@@ -148,6 +154,13 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         server_input = self.query_one("#zone-server", Input)
         if nameservers and not server_input.value.strip():
             server_input.value = nameservers[0]
+
+        # Auto-fill key file path if field is empty (only when adding new zone)
+        if self.mode == "add":
+            key_input = self.query_one("#zone-key", Input)
+            if not key_input.value.strip():
+                # Use prefix_key_path/domain.name.key format
+                key_input.value = f"{self._prefix_key_path}/{domain}.key"
 
         # Show lookup information
         self._show_zone_lookup_info(nameservers, a_records)
@@ -304,6 +317,7 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         self._record_index = record_index
         self._error: Static | None = None
         self._info: Static | None = None
+        self._discovered_cname_target: str | None = None
 
     def compose(self) -> ComposeResult:
         title = (
@@ -376,6 +390,9 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         if self._info:
             self._info.update("")
 
+        # Reset discovered CNAME target
+        self._discovered_cname_target = None
+
         # Skip lookup for empty values
         if not label or not label.strip():
             return
@@ -400,6 +417,10 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
 
             if not value_input.value.strip():
                 value_input.value = value
+
+            # Store the CNAME target for later record creation
+            if record_type == "CNAME":
+                self._discovered_cname_target = value
 
             # Show success message
             if self._info:
@@ -496,7 +517,7 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         except ValueError as exc:
             self._show_error(str(exc))
             return
-        self.dismiss((self._record_index, record))
+        self.dismiss((self._record_index, record, self._discovered_cname_target))
 
     def _build_record(self) -> Record:
         label = self._value("#record-label")
@@ -706,14 +727,20 @@ class ZoneDashboard(App):
             self._delete_record()
 
     def action_add_zone(self) -> None:
-        self.push_screen(ZoneFormScreen("add"), self._handle_zone_saved)
+        self.push_screen(
+            ZoneFormScreen("add", prefix_key_path=self._config.prefix_key_path),
+            self._handle_zone_saved,
+        )
 
     def action_edit_zone(self) -> None:
         zone = self._current_zone()
         if not zone:
             self.notify("No zone selected", severity="warning")
             return
-        self.push_screen(ZoneFormScreen("edit", zone), self._handle_zone_saved)
+        self.push_screen(
+            ZoneFormScreen("edit", zone, prefix_key_path=self._config.prefix_key_path),
+            self._handle_zone_saved,
+        )
 
     def action_delete_zone(self) -> None:
         zone = self._current_zone()
@@ -907,7 +934,7 @@ class ZoneDashboard(App):
     def _handle_record_saved(self, zone_name: str, payload: RecordFormResult | None) -> None:
         if not payload:
             return
-        index, record = payload
+        index, record, cname_target = payload
         zone = self._get_zone_by_name(zone_name)
         if not zone:
             self.notify(f"Zone '{zone_name}' no longer exists", severity="error")
@@ -925,6 +952,38 @@ class ZoneDashboard(App):
             records[index] = record
             target_index = index
             action = "updated"
+
+        # If a CNAME record was added and we have a discovered CNAME target,
+        # also create an A record for the target if it doesn't exist
+        if (
+            record.type == "CNAME" and cname_target and index is None  # Only for new records
+        ):
+            # Determine the label for the CNAME target
+            # If target is "@", it's the apex, otherwise it's the hostname part
+            target_label = "@" if cname_target == "@" else cname_target.split(".")[0]
+
+            # Check if a record already exists for this target
+            target_exists = any(r.label == target_label for r in records)
+
+            if not target_exists:
+                # Look up the A record for the target
+                target_fqdn = zone_name if target_label == "@" else f"{target_label}.{zone_name}"
+                a_records = lookup_a_records(target_fqdn)
+
+                if a_records:
+                    # Create an A record for the CNAME target
+                    target_record = Record(
+                        label=target_label,
+                        type="A",
+                        value=a_records[0],
+                        ttl=record.ttl,  # Use same TTL as the CNAME record
+                    )
+                    records.append(target_record)
+                    self.notify(
+                        f"Also added A record for '{target_label}' ({a_records[0]})",
+                        severity="information",
+                    )
+
         updated.records = records
         try:
             self.config_repo.update_zone(zone_name, updated)
