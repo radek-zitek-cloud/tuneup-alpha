@@ -4,7 +4,7 @@
 
 TuneUp Alpha is structured as a modular Python application with clear separation of concerns:
 
-```
+``` bash
 src/tuneup_alpha/
 ├── __init__.py      # Package exports
 ├── __main__.py      # Entry point for python -m tuneup_alpha
@@ -99,19 +99,19 @@ Textual-based interactive dashboard:
 
 ### CLI Commands Flow
 
-```
+``` bash
 User Command → CLI Parser → ConfigRepository → Models → Business Logic → Output
 ```
 
 ### TUI Flow
 
-```
+``` bash
 User Input → TUI Event Handler → DNS Lookup (optional) → ConfigRepository → Models → Update UI
 ```
 
 ### Apply Flow
 
-```
+``` bash
 Configuration → Models → NsupdatePlan → NsupdateClient → nsupdate → DNS Server
 ```
 
