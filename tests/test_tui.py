@@ -331,10 +331,10 @@ def test_dns_visual_cue_checking_indicator():
     # Mock dns_lookup to verify the checking indicator appears
     with patch("tuneup_alpha.tui.dns_lookup") as mock_dns:
         mock_dns.return_value = ("A", {"hostname": "test.com"})
-        
+
         # Perform DNS lookup
         form._perform_dns_lookup("8.8.8.8")
-        
+
         # The function should complete successfully
         # Note: We can't directly test the transient "Checking DNS..." message
         # without async testing, but we verify the function runs correctly
