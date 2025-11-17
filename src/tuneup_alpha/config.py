@@ -129,6 +129,7 @@ def sample_config() -> AppConfig:
                 name="example.com",
                 server="ns1.example.com",
                 key_file=Path("/etc/nsupdate/example.com.key"),
+                default_ttl=3600,
                 notes="Sandbox zone used for demonstrating TuneUp Alpha.",
                 records=[
                     Record(label="@", type="A", value="198.51.100.10", ttl=600),
