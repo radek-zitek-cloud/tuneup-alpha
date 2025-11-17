@@ -290,17 +290,6 @@ def verify(
     raise typer.Exit(code=1)
 
 
-def _find_zone(name: str, config_path: Path | None) -> Zone:
-    config = load_config(config_path)
-    for zone in config.zones:
-        if zone.name == name:
-            logger.debug(f"Found zone: {name}")
-            return zone
-    logger.warning(f"Zone '{name}' not found in configuration")
-    console.print(f"Zone '{name}' not found in configuration.")
-    raise typer.Exit(code=2)
-
-
 def _full_zone_plan(zone: Zone) -> NsupdatePlan:
     plan = NsupdatePlan(zone)
     for record in zone.records:
