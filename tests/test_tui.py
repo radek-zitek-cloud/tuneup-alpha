@@ -359,3 +359,107 @@ def test_dns_visual_cue_checking_indicator():
         # Note: We can't directly test the transient "Checking DNS..." message
         # without async testing, but we verify the function runs correctly
         mock_dns.assert_called_once_with("8.8.8.8")
+
+
+def test_zone_form_dynamic_lookup_on_input_change():
+    """Test that zone name input change triggers dynamic DNS lookup."""
+    form = ZoneFormScreen(mode="add", zone=None)
+
+    # Mock query_one to return mock inputs
+    class MockInput:
+        def __init__(self, input_id):
+            self.id = input_id
+            self.value = ""
+
+    server_input = MockInput("zone-server")
+    key_input = MockInput("zone-key")
+    info_static = type("MockStatic", (), {"update": lambda self, text: None})()
+
+    def mock_query_one(selector, input_type=None):
+        if selector == "#zone-server":
+            return server_input
+        elif selector == "#zone-key":
+            return key_input
+        return None
+
+    form.query_one = mock_query_one
+    form._info = info_static
+    form._error = info_static
+
+    # Mock the DNS lookup functions
+    with (
+        patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns,
+        patch("tuneup_alpha.tui_forms.lookup_a_records") as mock_a,
+    ):
+        mock_ns.return_value = ["ns1.example.com", "ns2.example.com"]
+        mock_a.return_value = ["192.0.2.1"]
+
+        # Simulate user typing a zone name
+        form._perform_zone_lookup("example.com")
+
+        # Assert that nameserver lookup was called
+        mock_ns.assert_called_once_with("example.com")
+        # Assert that A record lookup was called
+        mock_a.assert_called_once_with("example.com")
+        # Assert that server field was populated
+        assert server_input.value == "ns1.example.com"
+        # Assert that key field was populated
+        assert key_input.value == "~/.config/nsupdate/example.com.key"
+
+
+def test_zone_form_dynamic_lookup_empty_value():
+    """Test that empty zone name doesn't trigger DNS lookup."""
+    form = ZoneFormScreen(mode="add", zone=None)
+
+    # Mock the DNS lookup functions
+    with (
+        patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns,
+        patch("tuneup_alpha.tui_forms.lookup_a_records") as mock_a,
+    ):
+        # Simulate user clearing the zone name
+        form._perform_zone_lookup("")
+
+        # Assert that no lookups were performed
+        mock_ns.assert_not_called()
+        mock_a.assert_not_called()
+
+
+def test_zone_form_dynamic_lookup_preserves_existing_server():
+    """Test that DNS lookup doesn't override manually entered server."""
+    form = ZoneFormScreen(mode="add", zone=None)
+
+    # Mock query_one to return mock inputs
+    class MockInput:
+        def __init__(self, input_id, value=""):
+            self.id = input_id
+            self.value = value
+
+    # Server already has a value (user manually entered it)
+    server_input = MockInput("zone-server", "custom.nameserver.com")
+    key_input = MockInput("zone-key")
+    info_static = type("MockStatic", (), {"update": lambda self, text: None})()
+
+    def mock_query_one(selector, input_type=None):
+        if selector == "#zone-server":
+            return server_input
+        elif selector == "#zone-key":
+            return key_input
+        return None
+
+    form.query_one = mock_query_one
+    form._info = info_static
+    form._error = info_static
+
+    # Mock the DNS lookup functions
+    with (
+        patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns,
+        patch("tuneup_alpha.tui_forms.lookup_a_records") as mock_a,
+    ):
+        mock_ns.return_value = ["ns1.example.com"]
+        mock_a.return_value = []
+
+        # Simulate user typing a zone name
+        form._perform_zone_lookup("example.com")
+
+        # Assert that server field was NOT overwritten
+        assert server_input.value == "custom.nameserver.com"
