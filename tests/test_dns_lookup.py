@@ -1,11 +1,16 @@
 """Tests for DNS lookup utilities."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from tuneup_alpha.dns_lookup import (
+    dig_lookup,
     dns_lookup,
+    dns_lookup_label,
     forward_dns_lookup,
     is_ipv4,
+    lookup_a_records,
+    lookup_cname_records,
+    lookup_nameservers,
     reverse_dns_lookup,
 )
 
@@ -130,3 +135,136 @@ def test_dns_lookup_hostname_no_forward():
         suggested_type, result = dns_lookup("nonexistent.invalid")
         assert suggested_type == "CNAME"
         assert result["ip"] is None
+
+
+def test_dig_lookup_success():
+    """Test dig_lookup with successful response."""
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = "ns1.example.com.\nns2.example.com.\n"
+
+    with patch("tuneup_alpha.dns_lookup.subprocess.run", return_value=mock_result):
+        result = dig_lookup("example.com", "NS")
+        assert result == ["ns1.example.com", "ns2.example.com"]
+
+
+def test_dig_lookup_empty_result():
+    """Test dig_lookup with no results."""
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = ""
+
+    with patch("tuneup_alpha.dns_lookup.subprocess.run", return_value=mock_result):
+        result = dig_lookup("example.com", "NS")
+        assert result == []
+
+
+def test_dig_lookup_failure():
+    """Test dig_lookup with failed command."""
+    mock_result = MagicMock()
+    mock_result.returncode = 1
+
+    with patch("tuneup_alpha.dns_lookup.subprocess.run", return_value=mock_result):
+        result = dig_lookup("example.com", "NS")
+        assert result == []
+
+
+def test_dig_lookup_timeout():
+    """Test dig_lookup with timeout."""
+    import subprocess
+
+    with patch(
+        "tuneup_alpha.dns_lookup.subprocess.run",
+        side_effect=subprocess.TimeoutExpired("dig", 5),
+    ):
+        result = dig_lookup("example.com", "NS")
+        assert result == []
+
+
+def test_lookup_nameservers():
+    """Test lookup_nameservers function."""
+    with patch("tuneup_alpha.dns_lookup.dig_lookup") as mock_dig:
+        mock_dig.return_value = ["ns1.example.com", "ns2.example.com"]
+        result = lookup_nameservers("example.com")
+        assert result == ["ns1.example.com", "ns2.example.com"]
+        mock_dig.assert_called_once_with("example.com", "NS")
+
+
+def test_lookup_a_records():
+    """Test lookup_a_records function."""
+    with patch("tuneup_alpha.dns_lookup.dig_lookup") as mock_dig:
+        mock_dig.return_value = ["192.0.2.1", "192.0.2.2"]
+        result = lookup_a_records("example.com")
+        assert result == ["192.0.2.1", "192.0.2.2"]
+        mock_dig.assert_called_once_with("example.com", "A")
+
+
+def test_lookup_cname_records():
+    """Test lookup_cname_records function."""
+    with patch("tuneup_alpha.dns_lookup.dig_lookup") as mock_dig:
+        mock_dig.return_value = ["target.example.com"]
+        result = lookup_cname_records("www.example.com")
+        assert result == ["target.example.com"]
+        mock_dig.assert_called_once_with("www.example.com", "CNAME")
+
+
+def test_dns_lookup_label_with_cname():
+    """Test dns_lookup_label finding a CNAME record."""
+    with patch("tuneup_alpha.dns_lookup.lookup_cname_records") as mock_cname:
+        mock_cname.return_value = ["target.example.com"]
+        record_type, value = dns_lookup_label("www", "example.com")
+        assert record_type == "CNAME"
+        assert value == "target.example.com"
+        mock_cname.assert_called_once_with("www.example.com")
+
+
+def test_dns_lookup_label_with_a_record():
+    """Test dns_lookup_label finding an A record."""
+    with (
+        patch("tuneup_alpha.dns_lookup.lookup_cname_records") as mock_cname,
+        patch("tuneup_alpha.dns_lookup.lookup_a_records") as mock_a,
+    ):
+        mock_cname.return_value = []
+        mock_a.return_value = ["192.0.2.1"]
+        record_type, value = dns_lookup_label("www", "example.com")
+        assert record_type == "A"
+        assert value == "192.0.2.1"
+
+
+def test_dns_lookup_label_apex():
+    """Test dns_lookup_label with apex (@) label."""
+    with (
+        patch("tuneup_alpha.dns_lookup.lookup_cname_records") as mock_cname,
+        patch("tuneup_alpha.dns_lookup.lookup_a_records") as mock_a,
+    ):
+        mock_cname.return_value = []
+        mock_a.return_value = ["192.0.2.1"]
+        record_type, value = dns_lookup_label("@", "example.com")
+        assert record_type == "A"
+        assert value == "192.0.2.1"
+        # Should lookup the zone apex directly
+        mock_a.assert_called_once_with("example.com")
+
+
+def test_dns_lookup_label_not_found():
+    """Test dns_lookup_label when no records are found."""
+    with (
+        patch("tuneup_alpha.dns_lookup.lookup_cname_records") as mock_cname,
+        patch("tuneup_alpha.dns_lookup.lookup_a_records") as mock_a,
+    ):
+        mock_cname.return_value = []
+        mock_a.return_value = []
+        record_type, value = dns_lookup_label("www", "example.com")
+        assert record_type is None
+        assert value is None
+
+
+def test_dns_lookup_label_empty_inputs():
+    """Test dns_lookup_label with empty inputs."""
+    record_type, value = dns_lookup_label("", "example.com")
+    assert record_type is None
+    assert value is None
+
+    record_type, value = dns_lookup_label("www", "")
+    assert record_type is None
+    assert value is None

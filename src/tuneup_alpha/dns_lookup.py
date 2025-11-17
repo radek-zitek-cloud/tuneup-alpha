@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import re
 import socket
+import subprocess
 from typing import Literal
 
 LookupResult = dict[str, str | None]
+DigResult = dict[str, list[str]]
 
 
 def is_ipv4(value: str) -> bool:
@@ -60,6 +62,107 @@ def forward_dns_lookup(hostname: str) -> LookupResult:
         return {"ip": ip_address}
     except (socket.herror, socket.gaierror, OSError):
         return {"ip": None}
+
+
+def dig_lookup(domain: str, record_type: str) -> list[str]:
+    """Perform DNS lookup using dig command.
+
+    Args:
+        domain: Domain name to lookup
+        record_type: DNS record type (A, CNAME, NS, etc.)
+
+    Returns:
+        List of values found for the record type
+    """
+    try:
+        # Run dig command with short output
+        result = subprocess.run(
+            ["dig", "+short", domain, record_type],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            return []
+
+        # Parse output - each line is a result
+        values = []
+        for line in result.stdout.strip().split("\n"):
+            line = line.strip()
+            if line:
+                # Remove trailing dot from hostnames
+                values.append(line.rstrip("."))
+
+        return values
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return []
+
+
+def lookup_nameservers(domain: str) -> list[str]:
+    """Lookup NS records for a domain using dig.
+
+    Args:
+        domain: Domain name to lookup
+
+    Returns:
+        List of nameserver hostnames
+    """
+    return dig_lookup(domain, "NS")
+
+
+def lookup_a_records(domain: str) -> list[str]:
+    """Lookup A records for a domain using dig.
+
+    Args:
+        domain: Domain name to lookup
+
+    Returns:
+        List of IPv4 addresses
+    """
+    return dig_lookup(domain, "A")
+
+
+def lookup_cname_records(domain: str) -> list[str]:
+    """Lookup CNAME records for a domain using dig.
+
+    Args:
+        domain: Domain name to lookup
+
+    Returns:
+        List of CNAME targets
+    """
+    return dig_lookup(domain, "CNAME")
+
+
+def dns_lookup_label(label: str, zone_name: str) -> tuple[Literal["A", "CNAME"] | None, str | None]:
+    """Lookup DNS information for a label within a zone.
+
+    Args:
+        label: Record label (e.g., "www", "@")
+        zone_name: Zone name (e.g., "example.com")
+
+    Returns:
+        Tuple of (record_type, value) if found, (None, None) otherwise
+    """
+    if not label or not zone_name:
+        return None, None
+
+    # Construct FQDN from label and zone
+    fqdn = zone_name if label == "@" else f"{label}.{zone_name}"
+
+    # First try CNAME lookup
+    cnames = lookup_cname_records(fqdn)
+    if cnames:
+        return "CNAME", cnames[0]
+
+    # Then try A record lookup
+    a_records = lookup_a_records(fqdn)
+    if a_records:
+        return "A", a_records[0]
+
+    return None, None
 
 
 def dns_lookup(value: str) -> tuple[Literal["A", "CNAME"] | None, LookupResult]:
