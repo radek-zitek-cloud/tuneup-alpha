@@ -67,6 +67,8 @@ Feature requests are welcome! Please open an issue describing:
 - How it would improve the project
 - Any implementation suggestions
 
+See [TODO.md](TODO.md) for a list of planned features and future improvements.
+
 ## Code of Conduct
 
 Be respectful and constructive in all interactions. We aim to maintain a welcoming and inclusive community.
