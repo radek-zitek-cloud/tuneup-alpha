@@ -12,6 +12,7 @@ src/tuneup_alpha/
 ├── config.py        # Configuration loading/saving
 ├── models.py        # Pydantic data models
 ├── dns_lookup.py    # DNS lookup utilities
+├── dns_state.py     # DNS state validation and comparison
 ├── nsupdate.py      # nsupdate script generation
 ├── tui.py           # Textual TUI application
 └── tui.tcss         # TUI styling
@@ -57,15 +58,34 @@ Generates and executes nsupdate scripts:
 DNS lookup utilities for auto-filling form fields:
 
 - `is_ipv4()`: Validates IPv4 address format
+- `is_ipv6()`: Validates IPv6 address format
 - `reverse_dns_lookup()`: Performs reverse DNS lookup (IP → hostname) using socket
 - `forward_dns_lookup()`: Performs forward DNS lookup (hostname → IP) using socket
 - `dig_lookup()`: Executes dig command to lookup DNS records
 - `lookup_nameservers()`: Looks up NS records for a domain using dig
 - `lookup_a_records()`: Looks up A records for a domain using dig
+- `lookup_aaaa_records()`: Looks up AAAA records for a domain using dig
 - `lookup_cname_records()`: Looks up CNAME records for a domain using dig
+- `lookup_mx_records()`: Looks up MX records for a domain using dig
+- `lookup_txt_records()`: Looks up TXT records for a domain using dig
+- `lookup_srv_records()`: Looks up SRV records for a domain using dig
+- `lookup_caa_records()`: Looks up CAA records for a domain using dig
 - `dns_lookup_label()`: Looks up DNS information for a label within a zone
 - `dns_lookup()`: Main lookup function that suggests record type and provides related DNS information
 - Gracefully handles lookup failures and network errors
+
+### dns_state.py
+
+DNS state validation and comparison utilities:
+
+- `DNSRecordState`: Represents a DNS record as it exists in the live DNS system
+- `DNSStateDiff`: Represents the difference between desired and current DNS state
+- `query_current_dns_state()`: Queries current DNS records for all labels in a zone
+- `compare_dns_state()`: Compares current DNS state with desired configuration
+- `validate_dns_state()`: Validates that current DNS state matches desired configuration
+- Returns validation results with detailed warnings and change summaries
+- Supports all DNS record types (A, AAAA, CNAME, MX, TXT, SRV, NS, CAA)
+- Handles priority, weight, and port fields for MX and SRV records
 
 ### cli.py
 
@@ -74,8 +94,10 @@ Typer-based command-line interface with commands:
 - `init`: Create initial configuration
 - `version`: Display version
 - `show`: Display configured zones in a table
-- `plan`: Preview nsupdate script for a zone
-- `apply`: Execute nsupdate script (with dry-run support)
+- `plan`: Preview nsupdate script for a zone (with optional `--show-current` flag)
+- `apply`: Execute nsupdate script (with dry-run support, state validation, and confirmation)
+- `diff`: Show differences between current DNS state and desired configuration
+- `verify`: Verify that current DNS state matches desired configuration
 - `tui`: Launch the interactive dashboard
 
 ### tui.py
@@ -103,16 +125,22 @@ Textual-based interactive dashboard:
 User Command → CLI Parser → ConfigRepository → Models → Business Logic → Output
 ```
 
+### DNS State Validation Flow
+
+``` bash
+User Command → DNS State Module → dig lookup → Parse Results → Compare with Config → Generate Diff → Output
+```
+
 ### TUI Flow
 
 ``` bash
 User Input → TUI Event Handler → DNS Lookup (optional) → ConfigRepository → Models → Update UI
 ```
 
-### Apply Flow
+### Apply Flow (with validation)
 
 ``` bash
-Configuration → Models → NsupdatePlan → NsupdateClient → nsupdate → DNS Server
+Configuration → DNS State Validation → User Confirmation → Models → NsupdatePlan → NsupdateClient → nsupdate → DNS Server
 ```
 
 ## Configuration Storage
@@ -166,6 +194,7 @@ Tests are organized by component:
 - `test_nsupdate.py`: Script generation
 - `test_cli.py`: CLI commands
 - `test_dns_lookup.py`: DNS lookup functionality
+- `test_dns_state.py`: DNS state validation and comparison
 - `test_tui.py`: TUI form handling and DNS lookup integration
 
 Coverage focuses on business logic and validation, with TUI testing

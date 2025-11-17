@@ -236,15 +236,9 @@ def diff(
 
     summary = diff_result.summary()
     console.print(f"\n[bold]DNS State Differences for {zone}:[/bold]")
-    console.print(
-        f"  [yellow]{summary['create']}[/yellow] record(s) to create"
-    )
-    console.print(
-        f"  [blue]{summary['update']}[/blue] record(s) to update"
-    )
-    console.print(
-        f"  [red]{summary['delete']}[/red] record(s) to delete"
-    )
+    console.print(f"  [yellow]{summary['create']}[/yellow] record(s) to create")
+    console.print(f"  [blue]{summary['update']}[/blue] record(s) to update")
+    console.print(f"  [red]{summary['delete']}[/red] record(s) to delete")
 
     # Show detailed changes
     if diff_result.changes:

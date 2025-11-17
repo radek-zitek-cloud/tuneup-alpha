@@ -78,22 +78,14 @@ def query_current_dns_state(zone: Zone) -> list[DNSRecordState]:
             try:
                 results = dig_lookup(fqdn, record_type)
                 if results:
-                    logger.debug(
-                        f"Found {len(results)} {record_type} record(s) for {fqdn}"
-                    )
+                    logger.debug(f"Found {len(results)} {record_type} record(s) for {fqdn}")
                     for value in results:
                         # Parse the result based on record type
-                        current_records.append(
-                            _parse_dns_record(label, record_type, value)
-                        )
+                        current_records.append(_parse_dns_record(label, record_type, value))
             except Exception as e:
-                logger.warning(
-                    f"Failed to query {record_type} records for {fqdn}: {e}"
-                )
+                logger.warning(f"Failed to query {record_type} records for {fqdn}: {e}")
 
-    logger.info(
-        f"Found {len(current_records)} current DNS record(s) for zone: {zone.name}"
-    )
+    logger.info(f"Found {len(current_records)} current DNS record(s) for zone: {zone.name}")
     return current_records
 
 
@@ -115,15 +107,11 @@ def compare_dns_state(zone: Zone) -> DNSStateDiff:
     # Create sets for easier comparison
     # Use enhanced key that includes priority/weight/port for MX/SRV records
     current_set = {
-        _record_key_enhanced(
-            r.label, r.type, r.value, r.priority, r.weight, r.port
-        ): r
+        _record_key_enhanced(r.label, r.type, r.value, r.priority, r.weight, r.port): r
         for r in current_records
     }
     desired_set = {
-        _record_key_enhanced(
-            r.label, r.type, r.value, r.priority, r.weight, r.port
-        ): r
+        _record_key_enhanced(r.label, r.type, r.value, r.priority, r.weight, r.port): r
         for r in desired_records
     }
 
@@ -144,9 +132,7 @@ def compare_dns_state(zone: Zone) -> DNSStateDiff:
                 # Convert current DNSRecordState to Record for comparison
                 previous = _dns_state_to_record(current_record)
                 changes.append(
-                    RecordChange(
-                        action="update", record=desired_record, previous=previous
-                    )
+                    RecordChange(action="update", record=desired_record, previous=previous)
                 )
 
     # Find records to delete (in current but not in desired)
@@ -268,9 +254,7 @@ def _parse_dns_record(label: str, record_type: str, value: str) -> DNSRecordStat
         if len(parts) == 2:
             priority = int(parts[0])
             hostname = parts[1].rstrip(".")
-            return DNSRecordState(
-                label=label, type=record_type, value=hostname, priority=priority
-            )
+            return DNSRecordState(label=label, type=record_type, value=hostname, priority=priority)
 
     # Parse SRV records (format: "priority weight port target")
     if record_type == "SRV":
@@ -340,16 +324,20 @@ def _needs_update(current: DNSRecordState, desired: Record) -> bool:
     # unless explicitly different in the config
 
     # Check if priority differs (for MX/SRV records)
-    if current.priority is not None and desired.priority is not None and current.priority != desired.priority:
+    if (
+        current.priority is not None
+        and desired.priority is not None
+        and current.priority != desired.priority
+    ):
         return True
 
     # Check if weight differs (for SRV records)
-    if current.weight is not None and desired.weight is not None and current.weight != desired.weight:
+    if (
+        current.weight is not None
+        and desired.weight is not None
+        and current.weight != desired.weight
+    ):
         return True
 
     # Check if port differs (for SRV records)
-    return (
-        current.port is not None
-        and desired.port is not None
-        and current.port != desired.port
-    )
+    return current.port is not None and desired.port is not None and current.port != desired.port

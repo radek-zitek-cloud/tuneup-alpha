@@ -88,6 +88,7 @@ def test_query_current_dns_state_empty(mock_dig: any) -> None:
 @patch("tuneup_alpha.dns_state.dig_lookup")
 def test_query_current_dns_state_with_a_record(mock_dig: any) -> None:
     """Test querying DNS state with A record."""
+
     # Mock dig_lookup to return an A record for the apex
     def mock_lookup(domain: str, record_type: str) -> list[str]:
         if domain == "example.com" and record_type == "A":
@@ -120,9 +121,7 @@ def test_query_current_dns_state_with_mx_record(mock_dig: any) -> None:
     mock_dig.side_effect = mock_lookup
 
     zone = _zone()
-    zone.records = [
-        Record(label="@", type="MX", value="mail.example.com", priority=10)
-    ]
+    zone.records = [Record(label="@", type="MX", value="mail.example.com", priority=10)]
 
     result = query_current_dns_state(zone)
 
@@ -238,9 +237,7 @@ def test_compare_dns_state_record_to_update(mock_dig: any) -> None:
 
     zone = _zone()
     # Desired has different priority
-    zone.records = [
-        Record(label="@", type="MX", value="mail.example.com", priority=20)
-    ]
+    zone.records = [Record(label="@", type="MX", value="mail.example.com", priority=20)]
 
     diff = compare_dns_state(zone)
 
@@ -328,9 +325,7 @@ def test_query_current_dns_state_with_txt_record(mock_dig: any) -> None:
     mock_dig.side_effect = mock_lookup
 
     zone = _zone()
-    zone.records = [
-        Record(label="@", type="TXT", value="v=spf1 include:_spf.example.com ~all")
-    ]
+    zone.records = [Record(label="@", type="TXT", value="v=spf1 include:_spf.example.com ~all")]
 
     result = query_current_dns_state(zone)
 
