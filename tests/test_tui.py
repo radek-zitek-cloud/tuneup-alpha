@@ -387,9 +387,10 @@ def test_zone_form_dynamic_lookup_on_input_change():
     form._error = info_static
 
     # Mock the DNS lookup functions
-    with patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns, patch(
-        "tuneup_alpha.tui_forms.lookup_a_records"
-    ) as mock_a:
+    with (
+        patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns,
+        patch("tuneup_alpha.tui_forms.lookup_a_records") as mock_a,
+    ):
         mock_ns.return_value = ["ns1.example.com", "ns2.example.com"]
         mock_a.return_value = ["192.0.2.1"]
 
@@ -411,9 +412,10 @@ def test_zone_form_dynamic_lookup_empty_value():
     form = ZoneFormScreen(mode="add", zone=None)
 
     # Mock the DNS lookup functions
-    with patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns, patch(
-        "tuneup_alpha.tui_forms.lookup_a_records"
-    ) as mock_a:
+    with (
+        patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns,
+        patch("tuneup_alpha.tui_forms.lookup_a_records") as mock_a,
+    ):
         # Simulate user clearing the zone name
         form._perform_zone_lookup("")
 
@@ -449,9 +451,10 @@ def test_zone_form_dynamic_lookup_preserves_existing_server():
     form._error = info_static
 
     # Mock the DNS lookup functions
-    with patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns, patch(
-        "tuneup_alpha.tui_forms.lookup_a_records"
-    ) as mock_a:
+    with (
+        patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns,
+        patch("tuneup_alpha.tui_forms.lookup_a_records") as mock_a,
+    ):
         mock_ns.return_value = ["ns1.example.com"]
         mock_a.return_value = []
 
