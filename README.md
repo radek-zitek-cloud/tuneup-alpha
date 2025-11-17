@@ -146,17 +146,37 @@ Other controls:
 
 #### Smart DNS Lookup
 
-When adding or editing records in the TUI, the tool automatically performs DNS lookups as you type in the value field:
+The TUI now includes comprehensive DNS lookup functionality to streamline zone and record management:
 
-- **Enter an IP address** (e.g., `192.0.2.1`):
-  - The record type is automatically set to `A`
-  - Reverse DNS lookup is performed to show the associated hostname (if available)
+##### When Creating or Editing Zones
 
-- **Enter a hostname** (e.g., `www.example.com`):
-  - The record type is automatically set to `CNAME`
-  - Forward DNS lookup is performed to show the associated IP address (if available)
+When you enter a domain name in the zone form, the application automatically:
 
-This feature helps ensure accuracy and saves time when creating DNS records.
+- **Looks up NS records** using `dig domain.com NS` and prefills the nameserver field with the first discovered nameserver
+- **Looks up A records** using `dig domain.com A` and automatically creates an apex (@) A record if one is found
+- **Shows visual feedback** indicating the number of NS and A records discovered
+
+##### When Creating or Editing Records
+
+The application provides intelligent DNS lookup in two ways:
+
+1. **When entering a label**:
+   - Automatically performs DNS lookup for the label within the zone
+   - If a CNAME record is found, prefills the type field with "CNAME" and value field with the target
+   - If an A record is found, prefills the type field with "A" and value field with the IP address
+   - Displays visual feedback showing what was discovered
+
+2. **When entering a value** (existing functionality):
+   - **Enter an IP address** (e.g., `192.0.2.1`):
+     - The record type is automatically set to `A`
+     - Reverse DNS lookup is performed to show the associated hostname (if available)
+   - **Enter a hostname** (e.g., `www.example.com`):
+     - The record type is automatically set to `CNAME`
+     - Forward DNS lookup is performed to show the associated IP address (if available)
+
+All DNS lookups provide visual cues (✓ for success, ○ for no results, ⏳ while checking) to keep you informed about what the application is discovering in the background.
+
+This feature helps ensure accuracy and saves time when creating DNS records by leveraging existing DNS infrastructure.
 
 #### Theme Customization
 
