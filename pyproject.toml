@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tuneup-alpha"
-version = "0.1.0"
+version = "0.2.0"
 description = "Dynamic DNS zone manager with a Textual TUI and nsupdate integration."
 readme = "README.md"
 authors = [{ name = "TuneUp Maintainers" }]

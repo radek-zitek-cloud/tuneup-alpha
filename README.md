@@ -325,6 +325,14 @@ make check  # runs lint + test
 
 ## Next Steps
 
-- Expand `RecordChange` modeling to compute diffs between desired and live state.
-- Add container packaging for deployment on automation hosts.
-- Integrate secrets management for distributing nsupdate keys safely.
+For a comprehensive roadmap of planned features and improvements, see [TODO.md](TODO.md).
+
+Key upcoming features include:
+- Additional DNS record types (MX, TXT, AAAA, SRV, NS, CAA)
+- DNS state validation and diff functionality
+- Enhanced security features and secrets management
+- Backup and restore functionality
+- Container packaging for deployment
+- Logging support and audit trails
+
+See the [TODO.md](TODO.md) file for the complete list of planned improvements.
