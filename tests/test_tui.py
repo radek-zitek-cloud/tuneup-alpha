@@ -4,7 +4,22 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tuneup_alpha.models import Record, Zone
-from tuneup_alpha.tui import RecordFormScreen, ZoneFormScreen
+from tuneup_alpha.tui import RecordFormScreen, ZoneFormScreen, ZoneDashboard
+
+
+def test_zone_dashboard_disables_tab_bindings() -> None:
+    """Test that tab and shift+tab bindings are disabled in the main dashboard."""
+    dashboard = ZoneDashboard()
+    
+    # Check that tab and shift+tab bindings exist and point to noop action
+    tab_bindings = [b for b in dashboard.BINDINGS if b.key in ("tab", "shift+tab")]
+    
+    assert len(tab_bindings) == 2, "Should have both tab and shift+tab bindings"
+    
+    for binding in tab_bindings:
+        assert binding.action == "noop", f"Binding {binding.key} should use 'noop' action"
+        assert binding.priority is True, f"Binding {binding.key} should have priority=True"
+        assert binding.show is False, f"Binding {binding.key} should not be shown in footer"
 
 
 def test_zone_form_preserves_records_on_edit(tmp_path: Path) -> None:
