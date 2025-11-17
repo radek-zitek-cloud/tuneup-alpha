@@ -13,6 +13,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Footer, Header, Input, Static
 
 from .config import ConfigError, ConfigRepository
+from .dns_lookup import dns_lookup
 from .models import AppConfig, Record, RecordType, Zone
 
 ZoneFormResult = tuple[str | None, Zone]
@@ -202,6 +203,7 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         self._initial_record = record
         self._record_index = record_index
         self._error: Static | None = None
+        self._info: Static | None = None
 
     def compose(self) -> ComposeResult:
         title = (
@@ -214,6 +216,8 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
             yield Static(title, id="modal-title")
             self._error = Static("", id="modal-error")
             yield self._error
+            self._info = Static("", id="modal-info")
+            yield self._info
             yield Static("Label (use @ for apex)")
             yield Input(
                 id="record-label",
@@ -250,6 +254,74 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
             self.dismiss(None)
         elif event.button.id == "save":
             self._submit()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Handle input changes to perform DNS lookup when value field changes."""
+        # Only perform DNS lookup on the value field
+        if event.input.id == "record-value":
+            self._perform_dns_lookup(event.value)
+
+    def _perform_dns_lookup(self, value: str) -> None:
+        """Perform DNS lookup and update type field and info message.
+
+        Args:
+            value: The value entered in the value field
+        """
+        # Clear previous messages
+        if self._error:
+            self._error.update("")
+        if self._info:
+            self._info.update("")
+
+        # Skip lookup for empty values
+        if not value or not value.strip():
+            return
+
+        # Perform DNS lookup
+        suggested_type, lookup_result = dns_lookup(value.strip())
+
+        # Update type field if we have a suggestion
+        if suggested_type:
+            type_input = self.query_one("#record-type", Input)
+            # Only auto-fill if the field is empty or contains default value
+            current_type = type_input.value.strip().upper()
+            if not current_type or current_type in ("A", ""):
+                type_input.value = suggested_type
+
+        # Show lookup information
+        self._show_lookup_info(suggested_type, lookup_result)
+
+    def _show_lookup_info(
+        self, suggested_type: Literal["A", "CNAME"] | None, lookup_result: dict
+    ) -> None:
+        """Display information about DNS lookup results.
+
+        Args:
+            suggested_type: Suggested record type based on the value
+            lookup_result: Results from DNS lookup
+        """
+        if not self._info:
+            return
+
+        messages = []
+
+        if suggested_type == "A":
+            # User entered an IP address
+            hostname = lookup_result.get("hostname")
+            if hostname:
+                messages.append(f"[cyan]Reverse DNS: {hostname}[/cyan]")
+            else:
+                messages.append("[dim]No reverse DNS found[/dim]")
+        elif suggested_type == "CNAME":
+            # User entered a hostname
+            ip = lookup_result.get("ip")
+            if ip:
+                messages.append(f"[cyan]Forward DNS: {ip}[/cyan]")
+            else:
+                messages.append("[dim]No forward DNS found[/dim]")
+
+        if messages:
+            self._info.update(" | ".join(messages))
 
     def on_input_submitted(self, _event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
         if not self._focus_relative_input(1, wrap=False):

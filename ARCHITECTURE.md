@@ -11,6 +11,7 @@ src/tuneup_alpha/
 ├── cli.py           # Typer CLI commands
 ├── config.py        # Configuration loading/saving
 ├── models.py        # Pydantic data models
+├── dns_lookup.py    # DNS lookup utilities
 ├── nsupdate.py      # nsupdate script generation
 ├── tui.py           # Textual TUI application
 └── tui.tcss         # TUI styling
@@ -44,6 +45,14 @@ Generates and executes nsupdate scripts:
 - Handles record creation, deletion, and updates
 - Renders changes into nsupdate script format
 
+### dns_lookup.py
+DNS lookup utilities for auto-filling form fields:
+- `is_ipv4()`: Validates IPv4 address format
+- `reverse_dns_lookup()`: Performs reverse DNS lookup (IP → hostname)
+- `forward_dns_lookup()`: Performs forward DNS lookup (hostname → IP)
+- `dns_lookup()`: Main lookup function that suggests record type and provides related DNS information
+- Gracefully handles lookup failures and network errors
+
 ### cli.py
 Typer-based command-line interface with commands:
 - `init`: Create initial configuration
@@ -57,10 +66,11 @@ Typer-based command-line interface with commands:
 Textual-based interactive dashboard:
 - `ZoneDashboard`: Main application screen
 - `ZoneFormScreen`: Modal for adding/editing zones
-- `RecordFormScreen`: Modal for adding/editing records
+- `RecordFormScreen`: Modal for adding/editing records with DNS lookup integration
 - `ConfirmDeleteScreen`: Confirmation dialogs
 - Real-time zone and record management
 - Tab navigation between zones and records
+- Smart DNS lookup that auto-fills record type and shows related DNS information
 
 ## Data Flow
 
@@ -71,7 +81,7 @@ User Command → CLI Parser → ConfigRepository → Models → Business Logic �
 
 ### TUI Flow
 ```
-User Input → TUI Event Handler → ConfigRepository → Models → Update UI
+User Input → TUI Event Handler → DNS Lookup (optional) → ConfigRepository → Models → Update UI
 ```
 
 ### Apply Flow
@@ -125,6 +135,8 @@ Tests are organized by component:
 - `test_config_repo.py`: Configuration persistence
 - `test_nsupdate.py`: Script generation
 - `test_cli.py`: CLI commands
+- `test_dns_lookup.py`: DNS lookup functionality
+- `test_tui.py`: TUI form handling and DNS lookup integration
 
-Coverage focuses on business logic and validation, with TUI testing 
+Coverage focuses on business logic and validation, with TUI testing
 being minimal due to the difficulty of testing interactive applications.
