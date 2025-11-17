@@ -148,3 +148,22 @@ def test_theme_roundtrip_persistence(tmp_path: Path) -> None:
         dashboard2.theme = dashboard2._config.theme
 
     assert dashboard2.theme == "tokyo-night"
+
+
+def test_action_quit_is_async(tmp_path: Path) -> None:
+    """Test that action_quit is properly defined as an async method.
+
+    This is critical because the parent App.action_quit is async, and if
+    the override is not async, the quit functionality won't work properly.
+    """
+    import inspect
+
+    config_path = tmp_path / "config.yaml"
+    repo = ConfigRepository(config_path)
+
+    # Create dashboard
+    dashboard = ZoneDashboard(config_repo=repo)
+
+    # Verify that action_quit is a coroutine function (async)
+    # This ensures the method signature matches the parent class
+    assert inspect.iscoroutinefunction(dashboard.action_quit)

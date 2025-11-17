@@ -505,13 +505,13 @@ class ZoneDashboard(App):
         self.theme = themes[next_index]
         self.notify(f"Theme changed to: {self.theme}", severity="information")
 
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:
         """Save theme before quitting."""
         # Save current theme to config
         self._config.theme = self.theme
         self.config_repo.save(self._config)
         # Call the parent quit action
-        super().action_quit()
+        await super().action_quit()
 
     def action_focus_zones(self) -> None:
         """Focus the zones pane."""
