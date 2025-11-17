@@ -115,10 +115,54 @@ def _delete_line(zone: Zone, record: Record) -> str:
 def _add_line(zone: Zone, record: Record) -> str:
     fqdn = _fqdn(zone, record)
     ttl = record.ttl or zone.default_ttl
-    return f"update add {fqdn} {ttl} {record.type} {record.value}"
+    
+    # Handle record types with special formatting
+    if record.type == "MX":
+        # MX records need priority before the value
+        priority = record.priority if record.priority is not None else 10
+        return f"update add {fqdn} {ttl} {record.type} {priority} {record.value}"
+    elif record.type == "SRV":
+        # SRV records need priority, weight, and port before the value
+        priority = record.priority if record.priority is not None else 0
+        weight = record.weight if record.weight is not None else 0
+        port = record.port if record.port is not None else 0
+        return f"update add {fqdn} {ttl} {record.type} {priority} {weight} {port} {record.value}"
+    elif record.type == "TXT":
+        # TXT records need to be quoted
+        # Handle multi-line or long text by proper quoting
+        quoted_value = _quote_txt_value(record.value)
+        return f"update add {fqdn} {ttl} {record.type} {quoted_value}"
+    elif record.type == "CAA":
+        # CAA records: value already contains "flags tag value" format
+        return f"update add {fqdn} {ttl} {record.type} {record.value}"
+    else:
+        # A, AAAA, CNAME, NS records
+        return f"update add {fqdn} {ttl} {record.type} {record.value}"
 
 
 def _fqdn(zone: Zone, record: Record) -> str:
     if record.is_apex:
         return zone.name.rstrip(".") + "."
     return f"{record.label}.{zone.name}".rstrip(".") + "."
+
+
+def _quote_txt_value(value: str) -> str:
+    """Quote TXT record value for nsupdate.
+    
+    TXT records can be split into multiple strings if longer than 255 characters.
+    Each string must be quoted.
+    """
+    # If the value contains quotes, escape them
+    escaped = value.replace('"', '\\"')
+    
+    # Split into chunks of 255 characters if needed
+    if len(escaped) <= 255:
+        return f'"{escaped}"'
+    
+    # Split into multiple quoted strings
+    chunks = []
+    for i in range(0, len(escaped), 255):
+        chunk = escaped[i:i+255]
+        chunks.append(f'"{chunk}"')
+    
+    return " ".join(chunks)

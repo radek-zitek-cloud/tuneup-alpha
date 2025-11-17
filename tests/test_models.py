@@ -99,7 +99,7 @@ def test_record_type_validation() -> None:
 
     # Invalid type should raise validation error
     with pytest.raises(ValidationError):
-        Record(label="@", type="MX", value="mail.example.com")  # type: ignore
+        Record(label="@", type="PTR", value="ptr.example.com")  # type: ignore
 
 
 def test_record_action_validation() -> None:
@@ -201,3 +201,131 @@ def test_app_config_with_prefix_key_path_and_zones() -> None:
     config = AppConfig(zones=[zone], prefix_key_path="/etc/nsupdate")
     assert config.prefix_key_path == "/etc/nsupdate"
     assert len(config.zones) == 1
+
+
+# Tests for new record types
+
+
+def test_record_aaaa_validation() -> None:
+    # Valid IPv6 addresses
+    Record(label="@", type="AAAA", value="2001:0db8:85a3:0000:0000:8a2e:0370:7334")
+    Record(label="@", type="AAAA", value="2001:db8:85a3::8a2e:370:7334")
+    Record(label="@", type="AAAA", value="::1")
+    Record(label="@", type="AAAA", value="fe80::1")
+    Record(label="@", type="AAAA", value="::ffff:192.0.2.1")
+
+    # Invalid IPv6 addresses
+    with pytest.raises(ValidationError, match="Invalid IPv6 address"):
+        Record(label="@", type="AAAA", value="not.an.ipv6.address")
+
+    with pytest.raises(ValidationError, match="Invalid IPv6 address"):
+        Record(label="@", type="AAAA", value="192.168.1.1")
+
+
+def test_record_mx_validation() -> None:
+    # Valid MX records
+    Record(label="@", type="MX", value="mail.example.com", priority=10)
+    Record(label="@", type="MX", value="mail.example.com.", priority=20)
+
+    # Invalid MX - missing priority
+    with pytest.raises(ValidationError, match="MX records require a priority"):
+        Record(label="@", type="MX", value="mail.example.com")
+
+    # Invalid MX - bad hostname
+    with pytest.raises(ValidationError, match="Invalid mail server hostname"):
+        Record(label="@", type="MX", value="-invalid.com", priority=10)
+
+
+def test_record_txt_validation() -> None:
+    # Valid TXT records
+    Record(label="@", type="TXT", value="v=spf1 include:_spf.example.com ~all")
+    Record(label="_dmarc", type="TXT", value="v=DMARC1; p=reject; rua=mailto:dmarc@example.com")
+    Record(
+        label="selector._domainkey",
+        type="TXT",
+        value="v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQ...",
+    )
+
+    # Test long TXT value (should work up to 4096 chars)
+    long_value = "x" * 1000
+    Record(label="@", type="TXT", value=long_value)
+
+    # Invalid - too long
+    with pytest.raises(ValidationError, match="TXT record value too long"):
+        Record(label="@", type="TXT", value="x" * 5000)
+
+
+def test_record_srv_validation() -> None:
+    # Valid SRV records
+    Record(
+        label="_http._tcp",
+        type="SRV",
+        value="server.example.com",
+        priority=10,
+        weight=60,
+        port=80,
+    )
+    Record(label="_xmpp._tcp", type="SRV", value=".", priority=0, weight=0, port=5269)
+
+    # Invalid SRV - missing priority
+    with pytest.raises(ValidationError, match="SRV records require a priority"):
+        Record(label="_http._tcp", type="SRV", value="server.example.com", weight=60, port=80)
+
+    # Invalid SRV - missing weight
+    with pytest.raises(ValidationError, match="SRV records require a weight"):
+        Record(label="_http._tcp", type="SRV", value="server.example.com", priority=10, port=80)
+
+    # Invalid SRV - missing port
+    with pytest.raises(ValidationError, match="SRV records require a port"):
+        Record(
+            label="_http._tcp", type="SRV", value="server.example.com", priority=10, weight=60
+        )
+
+
+def test_record_ns_validation() -> None:
+    # Valid NS records
+    Record(label="@", type="NS", value="ns1.example.com")
+    Record(label="subdomain", type="NS", value="ns1.example.com.")
+
+    # Invalid NS - bad hostname
+    with pytest.raises(ValidationError, match="Invalid nameserver hostname"):
+        Record(label="@", type="NS", value="-invalid.com")
+
+
+def test_record_caa_validation() -> None:
+    # Valid CAA records
+    Record(label="@", type="CAA", value="0 issue letsencrypt.org")
+    Record(label="@", type="CAA", value="0 issuewild ca.example.com")
+    Record(label="@", type="CAA", value="0 iodef mailto:security@example.com")
+    Record(label="@", type="CAA", value="128 issue ca.example.com")
+
+    # Invalid CAA - wrong format
+    with pytest.raises(ValidationError, match="Invalid CAA record format"):
+        Record(label="@", type="CAA", value="0 issue")
+
+    # Invalid CAA - bad flags
+    with pytest.raises(ValidationError, match="CAA flags must be numeric"):
+        Record(label="@", type="CAA", value="bad issue ca.example.com")
+
+    with pytest.raises(ValidationError, match="CAA flags must be 0-255"):
+        Record(label="@", type="CAA", value="256 issue ca.example.com")
+
+    # Invalid CAA - bad tag
+    with pytest.raises(ValidationError, match="CAA tag must be"):
+        Record(label="@", type="CAA", value="0 badtag ca.example.com")
+
+
+def test_record_type_validation_updated() -> None:
+    # Valid types - including new ones
+    Record(label="@", type="A", value="1.2.3.4")
+    Record(label="@", type="AAAA", value="2001:db8::1")
+    Record(label="www", type="CNAME", value="@")
+    Record(label="@", type="MX", value="mail.example.com", priority=10)
+    Record(label="@", type="TXT", value="v=spf1 ~all")
+    Record(label="_http._tcp", type="SRV", value="server.example.com", priority=0, weight=0, port=80)
+    Record(label="@", type="NS", value="ns1.example.com")
+    Record(label="@", type="CAA", value="0 issue ca.example.com")
+
+    # Invalid type should still raise validation error
+    with pytest.raises(ValidationError):
+        Record(label="@", type="PTR", value="example.com")  # type: ignore
