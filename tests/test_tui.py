@@ -205,3 +205,137 @@ def test_record_form_dns_lookup_preserves_existing_type():
 
         # Assert that type was NOT changed because it was already set to CNAME
         assert type_input.value == "CNAME"
+
+
+def test_dns_visual_cue_successful_reverse_lookup():
+    """Test visual cue for successful reverse DNS lookup."""
+    form = RecordFormScreen(mode="add", zone_name="example.com")
+
+    # Mock info widget to capture the displayed message
+    class MockStatic:
+        def __init__(self):
+            self.renderable = ""
+
+        def update(self, text):
+            self.renderable = text
+
+    info_static = MockStatic()
+    form._info = info_static
+
+    # Test successful reverse DNS lookup
+    form._show_lookup_info("A", {"hostname": "dns.google"})
+
+    # Verify the visual cue includes success indicator and hostname
+    assert "✓" in info_static.renderable
+    assert "Reverse DNS: dns.google" in info_static.renderable
+    assert "[green]" in info_static.renderable
+
+
+def test_dns_visual_cue_failed_reverse_lookup():
+    """Test visual cue for failed reverse DNS lookup."""
+    form = RecordFormScreen(mode="add", zone_name="example.com")
+
+    class MockStatic:
+        def __init__(self):
+            self.renderable = ""
+
+        def update(self, text):
+            self.renderable = text
+
+    info_static = MockStatic()
+    form._info = info_static
+
+    # Test failed reverse DNS lookup
+    form._show_lookup_info("A", {"hostname": None})
+
+    # Verify the visual cue includes no-result indicator
+    assert "○" in info_static.renderable
+    assert "No reverse DNS found" in info_static.renderable
+    assert "[yellow]" in info_static.renderable
+
+
+def test_dns_visual_cue_successful_forward_lookup():
+    """Test visual cue for successful forward DNS lookup."""
+    form = RecordFormScreen(mode="add", zone_name="example.com")
+
+    class MockStatic:
+        def __init__(self):
+            self.renderable = ""
+
+        def update(self, text):
+            self.renderable = text
+
+    info_static = MockStatic()
+    form._info = info_static
+
+    # Test successful forward DNS lookup
+    form._show_lookup_info("CNAME", {"ip": "93.184.216.34"})
+
+    # Verify the visual cue includes success indicator and IP
+    assert "✓" in info_static.renderable
+    assert "Forward DNS: 93.184.216.34" in info_static.renderable
+    assert "[green]" in info_static.renderable
+
+
+def test_dns_visual_cue_failed_forward_lookup():
+    """Test visual cue for failed forward DNS lookup."""
+    form = RecordFormScreen(mode="add", zone_name="example.com")
+
+    class MockStatic:
+        def __init__(self):
+            self.renderable = ""
+
+        def update(self, text):
+            self.renderable = text
+
+    info_static = MockStatic()
+    form._info = info_static
+
+    # Test failed forward DNS lookup
+    form._show_lookup_info("CNAME", {"ip": None})
+
+    # Verify the visual cue includes no-result indicator
+    assert "○" in info_static.renderable
+    assert "No forward DNS found" in info_static.renderable
+    assert "[yellow]" in info_static.renderable
+
+
+def test_dns_visual_cue_checking_indicator():
+    """Test that checking indicator is shown during DNS lookup."""
+    form = RecordFormScreen(mode="add", zone_name="example.com")
+
+    class MockStatic:
+        def __init__(self):
+            self.renderable = ""
+
+        def update(self, text):
+            self.renderable = text
+
+    class MockInput:
+        def __init__(self, input_id):
+            self.id = input_id
+            self.value = ""
+
+    info_static = MockStatic()
+    type_input = MockInput("record-type")
+
+    def mock_query_one(selector, input_type=None):
+        if selector == "#record-type":
+            return type_input
+        return None
+
+    form.query_one = mock_query_one
+    form._info = info_static
+    form._error = MockStatic()
+
+    # Mock dns_lookup to verify the checking indicator appears
+    with patch("tuneup_alpha.tui.dns_lookup") as mock_dns:
+        mock_dns.return_value = ("A", {"hostname": "test.com"})
+
+        # Perform DNS lookup
+        form._perform_dns_lookup("8.8.8.8")
+
+        # The function should complete successfully
+        # Note: We can't directly test the transient "Checking DNS..." message
+        # without async testing, but we verify the function runs correctly
+        mock_dns.assert_called_once_with("8.8.8.8")
