@@ -328,6 +328,7 @@ make check  # runs lint + test
 For a comprehensive roadmap of planned features and improvements, see [TODO.md](TODO.md).
 
 Key upcoming features include:
+
 - Additional DNS record types (MX, TXT, AAAA, SRV, NS, CAA)
 - DNS state validation and diff functionality
 - Enhanced security features and secrets management

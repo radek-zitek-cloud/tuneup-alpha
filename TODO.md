@@ -48,11 +48,13 @@ Query and compare current DNS state with desired configuration:
 ### Enhanced Security
 
 #### Key File Validation
+
 - Verify nsupdate key file permissions (should be 0400 or 0600)
 - Validate key file format and contents
 - Warning if key files are world-readable
 
 #### Secrets Management Integration
+
 - Support for external secrets management (HashiCorp Vault, AWS Secrets Manager, etc.)
 - Environment variable substitution in config files
 - Encrypted configuration file support
@@ -103,18 +105,21 @@ Optional web interface in addition to TUI:
 ### Enhanced TUI Features
 
 #### Improved Zone Management
+
 - Zone templates for common configurations
 - Zone cloning/duplication
 - Bulk record operations within a zone
 - Record import/export (CSV, JSON)
 
 #### Search and Filter
+
 - Search across all zones and records
 - Filter by record type, TTL, or other attributes
 - Advanced query syntax
 - Saved searches/filters
 
 #### Visual Enhancements
+
 - Syntax highlighting in forms
 - Record grouping and categorization
 - Zone health indicators
@@ -124,17 +129,20 @@ Optional web interface in addition to TUI:
 ### Advanced DNS Features
 
 #### Zone File Support
+
 - Import from BIND zone files
 - Export to standard zone file format
 - Zone file validation
 
 #### DNSSEC Support
+
 - DNSSEC key management
 - Automatic signing
 - Key rotation support
 - Validation and testing
 
 #### Dynamic DNS Client Mode
+
 - Act as a dynamic DNS client
 - Periodic IP address checking
 - Automatic record updates
@@ -143,12 +151,14 @@ Optional web interface in addition to TUI:
 ### Performance and Scalability
 
 #### Optimization
+
 - Parallel zone updates
 - Caching of DNS lookups
 - Incremental updates (only changed records)
 - Connection pooling for nsupdate
 
 #### Large-scale Support
+
 - Support for hundreds of zones
 - Pagination in TUI for large datasets
 - Database backend option (SQLite, PostgreSQL)
@@ -157,18 +167,21 @@ Optional web interface in addition to TUI:
 ### Integration and Automation
 
 #### CI/CD Integration
+
 - GitHub Actions workflow examples
 - GitLab CI templates
 - Validation-only mode for CI checks
 - Terraform provider
 
 #### Monitoring and Alerting
+
 - Metrics export (Prometheus)
 - Health check endpoints
 - Webhook notifications for changes
 - Integration with monitoring systems
 
 #### API and Extensions
+
 - RESTful API for programmatic access
 - Plugin system for custom record types
 - Custom validation rules
