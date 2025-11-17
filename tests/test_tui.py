@@ -137,7 +137,7 @@ def test_record_form_dns_lookup_for_ip():
     form._info = info_static
 
     # Mock dns_lookup to simulate successful reverse DNS
-    with patch("tuneup_alpha.tui.dns_lookup") as mock_dns:
+    with patch("tuneup_alpha.tui_forms.dns_lookup") as mock_dns:
         mock_dns.return_value = ("A", {"hostname": "example.com"})
 
         # Simulate user entering an IP address
@@ -170,7 +170,7 @@ def test_record_form_dns_lookup_for_hostname():
     form._info = info_static
 
     # Mock dns_lookup to simulate successful forward DNS
-    with patch("tuneup_alpha.tui.dns_lookup") as mock_dns:
+    with patch("tuneup_alpha.tui_forms.dns_lookup") as mock_dns:
         mock_dns.return_value = ("CNAME", {"ip": "192.0.2.1"})
 
         # Simulate user entering a hostname
@@ -186,7 +186,7 @@ def test_record_form_dns_lookup_empty_value():
     form = RecordFormScreen(mode="add", zone_name="example.com")
 
     # Mock dns_lookup
-    with patch("tuneup_alpha.tui.dns_lookup") as mock_dns:
+    with patch("tuneup_alpha.tui_forms.dns_lookup") as mock_dns:
         # Simulate user entering empty value
         form._perform_dns_lookup("")
 
@@ -217,7 +217,7 @@ def test_record_form_dns_lookup_preserves_existing_type():
     form._info = info_static
 
     # Mock dns_lookup to suggest "A" type
-    with patch("tuneup_alpha.tui.dns_lookup") as mock_dns:
+    with patch("tuneup_alpha.tui_forms.dns_lookup") as mock_dns:
         mock_dns.return_value = ("A", {"hostname": "example.com"})
 
         # Simulate user entering an IP address
@@ -349,7 +349,7 @@ def test_dns_visual_cue_checking_indicator():
     form._error = MockStatic()
 
     # Mock dns_lookup to verify the checking indicator appears
-    with patch("tuneup_alpha.tui.dns_lookup") as mock_dns:
+    with patch("tuneup_alpha.tui_forms.dns_lookup") as mock_dns:
         mock_dns.return_value = ("A", {"hostname": "test.com"})
 
         # Perform DNS lookup
