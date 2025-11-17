@@ -108,7 +108,7 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
-    def on_input_changed(self, event: Input.Changed) -> None:
+    def on_input_changed(self, _event: Input.Changed) -> None:
         """Handle input changes to clear error messages."""
         # Clear error when user types
         if self._error:
@@ -676,9 +676,10 @@ class ZoneDashboard(App):
 
     CSS_PATH = "tui.tcss"
     BINDINGS = [
-        # Disable default tab/shift+tab pane switching (use z/r instead)
-        Binding("tab", "noop", show=False, priority=True),
-        Binding("shift+tab", "noop", show=False, priority=True),
+        # Disable default tab/shift+tab pane switching in main app (use z/r instead)
+        # Note: Modal screens will override these with their own tab bindings
+        Binding("tab", "noop", show=False),
+        Binding("shift+tab", "noop", show=False),
         # Pane focus
         Binding("z", "focus_zones", "Focus zones"),
         Binding("r", "focus_records", "Focus records"),
