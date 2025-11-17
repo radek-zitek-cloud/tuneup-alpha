@@ -106,10 +106,13 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
-    def on_input_changed(self, _event: Input.Changed) -> None:
-        """Handle input changes to clear error messages."""
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Handle input changes to clear error messages and perform zone lookup."""
         if self._error:
             self._error.update("")
+
+        if event.input.id == "zone-name":
+            self._perform_zone_lookup(event.value)
 
     def on_input_blurred(self, event: Input.Blurred) -> None:
         """Handle input blur to perform DNS lookup on zone name field."""
