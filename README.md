@@ -9,6 +9,7 @@ TuneUp Alpha is a Python 3.11 toolbox for managing dynamic DNS zones through `ns
 ## Feature Highlights
 
 - **Dynamic plans** – build and optionally apply `nsupdate` scripts for each managed zone.
+- **DNS state validation** – compare current DNS state with desired configuration, show diffs, and verify zone consistency.
 - **Config-first workflow** – store zones, records, and key metadata as structured YAML that lives in source control.
 - **Interactive dashboard** – launch the Textual TUI to inspect zones, records, and metadata without leaving the terminal.
 - **In-app authoring** – press `z` to focus zones or `r` to focus records, then use `a`/`e`/`d` to add, edit, or delete items in the focused pane.
@@ -24,6 +25,7 @@ src/tuneup_alpha/       # Application source
   models.py             # Pydantic data models
   nsupdate.py           # Script builder + executor
   dns_lookup.py         # DNS lookup utilities
+  dns_state.py          # DNS state validation and comparison
   tui.py                # Textual-based dashboard
   tui.tcss              # TUI styling
   cli.py                # Typer CLI entry point
@@ -64,10 +66,32 @@ tuneup-alpha tui
 
 Inside the dashboard, press `z` to focus the zones pane or `r` to focus the records pane. Once a pane is focused, use `a` to add, `e` to edit, or `d` to delete items in that pane. Press `Esc` to cancel any dialog, and `l` to reload the configuration from disk.
 
+### Validate DNS State
+
+Check if current DNS state matches your configuration:
+
+```bash
+tuneup-alpha verify example.com
+```
+
+### View Differences
+
+See what changes are needed to align current DNS with your configuration:
+
+```bash
+tuneup-alpha diff example.com
+```
+
 ### Preview an nsupdate Script
 
 ```bash
 tuneup-alpha plan example.com
+```
+
+You can also show current DNS state comparison:
+
+```bash
+tuneup-alpha plan example.com --show-current
 ```
 
 ### Apply Changes (Dry-Run by Default)
@@ -76,7 +100,18 @@ tuneup-alpha plan example.com
 tuneup-alpha apply example.com --dry-run
 ```
 
-Remove `--dry-run` once you are satisfied with the generated script.
+Remove `--dry-run` once you are satisfied with the generated script. When applying changes without dry-run, the tool will:
+
+- Query current DNS state
+- Show a summary of changes to be made
+- Warn about potentially destructive operations (deletions)
+- Ask for confirmation before proceeding
+
+To skip the validation and confirmation, use the `--force` flag:
+
+```bash
+tuneup-alpha apply example.com --no-dry-run --force
+```
 
 ## Usage Examples
 
@@ -229,7 +264,68 @@ zones:
         value: "@"
 ```
 
-### Example 4: Custom Config Location
+### Example 4: DNS State Validation
+
+Validate that your DNS records match your configuration:
+
+```bash
+# Check if DNS state is valid
+tuneup-alpha verify mysite.com
+```
+
+Output when valid:
+
+```text
+✓ Zone 'mysite.com' is valid and matches configuration
+```
+
+Output when invalid:
+
+```text
+✗ Zone 'mysite.com' validation failed:
+  DNS state mismatch: 1 to create, 0 to update, 1 to delete
+  Missing: mail A 203.0.113.50
+  Extra: old A 198.51.100.100
+```
+
+View detailed differences:
+
+```bash
+tuneup-alpha diff mysite.com
+```
+
+Example output:
+
+```text
+DNS State Differences for mysite.com:
+  1 record(s) to create
+  0 record(s) to update
+  1 record(s) to delete
+
+Detailed Changes:
+  + mail A 203.0.113.50 (TTL: 300)
+  - old A 198.51.100.100
+```
+
+### Example 5: Safe Apply with Validation
+
+Apply changes with automatic validation and confirmation:
+
+```bash
+tuneup-alpha apply mysite.com --no-dry-run
+```
+
+The tool will show:
+
+```text
+⚠ Warning: Changes will be applied:
+  1 record(s) to create, 0 to update, 1 to delete
+
+⚠ Warning: 1 record(s) will be deleted from DNS
+Do you want to proceed? [y/N]:
+```
+
+### Example 6: Custom Config Location
 
 Use a custom configuration file location (useful for CI/CD):
 

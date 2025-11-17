@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .config import ConfigRepository, load_config
+from .dns_state import compare_dns_state, validate_dns_state
 from .logging_config import (
     LoggingConfig,
     LogLevel,
@@ -124,6 +125,7 @@ def tui(config_path: Path | None = typer.Option(None)) -> None:
 def plan(
     zone: str = typer.Argument(..., help="Zone name to render"),
     config_path: Path | None = typer.Option(None),
+    show_current: bool = typer.Option(False, "--show-current", help="Show current DNS state"),
 ) -> None:
     """Show the nsupdate script that would recreate every record for a zone."""
 
@@ -132,6 +134,20 @@ def plan(
     logger.info(f"Generating plan for zone: {zone}")
 
     target_zone = _find_zone(zone, config_path)
+
+    # If requested, show current state comparison
+    if show_current:
+        diff_result = compare_dns_state(target_zone)
+        if diff_result.has_changes():
+            summary = diff_result.summary()
+            console.print("[bold]Current DNS State:[/bold]")
+            console.print(
+                f"  Changes needed: {summary['create']} create, "
+                f"{summary['update']} update, {summary['delete']} delete\n"
+            )
+        else:
+            console.print("[green]Current DNS state matches configuration[/green]\n")
+
     plan = _full_zone_plan(target_zone)
     script = plan.render()
     console.print(script)
@@ -143,6 +159,7 @@ def apply(
     zone: str = typer.Argument(..., help="Zone name to push"),
     config_path: Path | None = typer.Option(None),
     dry_run: bool = typer.Option(True, help="Preview the script without executing"),
+    force: bool = typer.Option(False, "--force", help="Skip state validation check"),
 ) -> None:
     """Apply the generated plan using nsupdate (defaults to dry-run)."""
 
@@ -151,6 +168,31 @@ def apply(
     logger.info(f"Applying changes for zone: {zone} (dry_run={dry_run})")
 
     target_zone = _find_zone(zone, config_path)
+
+    # Validate current state and show warnings unless --force is used
+    if not force and not dry_run:
+        diff_result = compare_dns_state(target_zone)
+        if diff_result.has_changes():
+            summary = diff_result.summary()
+            console.print("[yellow]⚠ Warning:[/yellow] Changes will be applied:")
+            console.print(
+                f"  {summary['create']} record(s) to create, "
+                f"{summary['update']} to update, {summary['delete']} to delete"
+            )
+
+            # Check for potentially dangerous operations
+            if summary["delete"] > 0:
+                console.print(
+                    f"\n[red]⚠ Warning:[/red] {summary['delete']} record(s) "
+                    "will be deleted from DNS"
+                )
+
+            confirm = typer.confirm("Do you want to proceed?")
+            if not confirm:
+                console.print("Operation cancelled.")
+                logger.info(f"Apply operation cancelled by user for zone: {zone}")
+                raise typer.Exit(code=0)
+
     plan = _full_zone_plan(target_zone)
     client = NsupdateClient()
     result = client.apply_plan(plan, dry_run=dry_run)
@@ -171,6 +213,81 @@ def _find_zone(name: str, config_path: Path | None) -> Zone:
     logger.warning(f"Zone '{name}' not found in configuration")
     console.print(f"Zone '{name}' not found in configuration.")
     raise typer.Exit(code=2)
+
+
+@app.command()
+def diff(
+    zone: str = typer.Argument(..., help="Zone name to compare"),
+    config_path: Path | None = typer.Option(None),
+) -> None:
+    """Show differences between current DNS state and desired configuration."""
+
+    _initialize_logging(config_path)
+    set_correlation_id()
+    logger.info(f"Comparing DNS state for zone: {zone}")
+
+    target_zone = _find_zone(zone, config_path)
+    diff_result = compare_dns_state(target_zone)
+
+    if not diff_result.has_changes():
+        console.print(f"[green]✓[/green] Zone '{zone}' matches desired configuration")
+        logger.info(f"Zone '{zone}' is in sync with desired configuration")
+        return
+
+    summary = diff_result.summary()
+    console.print(f"\n[bold]DNS State Differences for {zone}:[/bold]")
+    console.print(f"  [yellow]{summary['create']}[/yellow] record(s) to create")
+    console.print(f"  [blue]{summary['update']}[/blue] record(s) to update")
+    console.print(f"  [red]{summary['delete']}[/red] record(s) to delete")
+
+    # Show detailed changes
+    if diff_result.changes:
+        console.print("\n[bold]Detailed Changes:[/bold]")
+        for change in diff_result.changes:
+            if change.action == "create":
+                console.print(
+                    f"  [green]+[/green] {change.record.label} {change.record.type} "
+                    f"{change.record.value} (TTL: {change.record.ttl})"
+                )
+            elif change.action == "delete":
+                console.print(
+                    f"  [red]-[/red] {change.record.label} {change.record.type} "
+                    f"{change.record.value}"
+                )
+            elif change.action == "update":
+                console.print(
+                    f"  [blue]~[/blue] {change.record.label} {change.record.type} "
+                    f"{change.record.value} (TTL: {change.record.ttl})"
+                )
+
+    logger.info(f"DNS diff completed for zone: {zone}")
+
+
+@app.command()
+def verify(
+    zone: str = typer.Argument(..., help="Zone name to verify"),
+    config_path: Path | None = typer.Option(None),
+) -> None:
+    """Verify that current DNS state matches desired configuration."""
+
+    _initialize_logging(config_path)
+    set_correlation_id()
+    logger.info(f"Verifying DNS state for zone: {zone}")
+
+    target_zone = _find_zone(zone, config_path)
+    is_valid, warnings = validate_dns_state(target_zone)
+
+    if is_valid:
+        console.print(f"[green]✓[/green] Zone '{zone}' is valid and matches configuration")
+        logger.info(f"Zone '{zone}' validation successful")
+        raise typer.Exit(code=0)
+
+    console.print(f"[red]✗[/red] Zone '{zone}' validation failed:")
+    for warning in warnings:
+        console.print(f"  {warning}")
+
+    logger.warning(f"Zone '{zone}' validation failed with {len(warnings)} issue(s)")
+    raise typer.Exit(code=1)
 
 
 def _full_zone_plan(zone: Zone) -> NsupdatePlan:
