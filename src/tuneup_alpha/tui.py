@@ -13,7 +13,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Footer, Header, Input, Static
 
 from .config import ConfigError, ConfigRepository
-from .dns_lookup import dns_lookup
+from .dns_lookup import dns_lookup, dns_lookup_label, lookup_a_records, lookup_nameservers
 from .models import AppConfig, Record, RecordType, Zone
 
 ZoneFormResult = tuple[str | None, Zone]
@@ -43,6 +43,9 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         self._initial_zone = zone
         self._original_name = zone.name if zone else None
         self._error: Static | None = None
+        self._info: Static | None = None
+        self._discovered_ns: list[str] = []
+        self._discovered_a_records: list[str] = []
 
     def compose(self) -> ComposeResult:
         title = "Add Managed Zone" if self.mode == "add" else "Edit Managed Zone"
@@ -51,6 +54,8 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
             yield Static(title, id="modal-title")
             self._error = Static("", id="modal-error")
             yield self._error
+            self._info = Static("", id="modal-info")
+            yield self._info
             yield Static("Zone name (example.com)")
             yield Input(
                 id="zone-name",
@@ -97,6 +102,87 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Handle input changes to perform DNS lookup when zone name changes."""
+        # Only perform DNS lookup on the zone name field
+        if event.input.id == "zone-name":
+            self._perform_zone_lookup(event.value)
+
+    def _perform_zone_lookup(self, domain: str) -> None:
+        """Perform DNS lookup for zone and update fields with discovered values.
+
+        Args:
+            domain: The domain name entered in the zone name field
+        """
+        # Clear previous messages
+        if self._error:
+            self._error.update("")
+        if self._info:
+            self._info.update("")
+
+        # Skip lookup for empty values or when editing existing zone
+        if not domain or not domain.strip():
+            self._discovered_ns = []
+            self._discovered_a_records = []
+            return
+
+        # Don't perform lookup if this is the original zone name (editing case)
+        if self._original_name and domain.strip() == self._original_name:
+            return
+
+        # Show checking indicator
+        if self._info:
+            self._info.update("[yellow]⏳ Looking up DNS records...[/yellow]")
+
+        domain = domain.strip()
+
+        # Lookup NS records
+        nameservers = lookup_nameservers(domain)
+        self._discovered_ns = nameservers
+
+        # Lookup A records for the apex
+        a_records = lookup_a_records(domain)
+        self._discovered_a_records = a_records
+
+        # Auto-fill nameserver field if found and field is empty
+        server_input = self.query_one("#zone-server", Input)
+        if nameservers and not server_input.value.strip():
+            server_input.value = nameservers[0]
+
+        # Show lookup information
+        self._show_zone_lookup_info(nameservers, a_records)
+
+    def _show_zone_lookup_info(self, nameservers: list[str], a_records: list[str]) -> None:
+        """Display information about zone DNS lookup results.
+
+        Args:
+            nameservers: List of discovered nameservers
+            a_records: List of discovered A records
+        """
+        if not self._info:
+            return
+
+        messages = []
+
+        if nameservers:
+            ns_list = ", ".join(nameservers[:2])  # Show first 2
+            if len(nameservers) > 2:
+                ns_list += f" (+{len(nameservers) - 2} more)"
+            messages.append(f"[green]✓[/green] [cyan]NS: {ns_list}[/cyan]")
+        else:
+            messages.append("[yellow]○[/yellow] [dim]No NS records found[/dim]")
+
+        if a_records:
+            a_list = ", ".join(a_records[:2])  # Show first 2
+            if len(a_records) > 2:
+                a_list += f" (+{len(a_records) - 2} more)"
+            messages.append(f"[green]✓[/green] [cyan]A: {a_list}[/cyan]")
+            if self.mode == "add":
+                messages.append("[dim](A record will be added)[/dim]")
+
+        if messages:
+            self._info.update(" | ".join(messages))
+
     def on_input_submitted(self, _event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
         if not self._focus_relative_input(1, wrap=False):
             self._submit()
@@ -142,6 +228,20 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
 
         # Preserve existing records when editing a zone
         existing_records = self._initial_zone.records if self._initial_zone else []
+
+        # Add discovered A records when creating a new zone
+        if self.mode == "add" and self._discovered_a_records:
+            # Check if apex A record already exists
+            has_apex_a = any(r.label == "@" and r.type == "A" for r in existing_records)
+            if not has_apex_a:
+                # Add the first discovered A record for the apex
+                apex_record = Record(
+                    label="@",
+                    type="A",
+                    value=self._discovered_a_records[0],
+                    ttl=default_ttl,
+                )
+                existing_records = [apex_record] + existing_records
 
         return Zone(
             name=name,
@@ -256,10 +356,60 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
             self._submit()
 
     def on_input_changed(self, event: Input.Changed) -> None:
-        """Handle input changes to perform DNS lookup when value field changes."""
-        # Only perform DNS lookup on the value field
+        """Handle input changes to perform DNS lookup."""
+        # Perform DNS lookup on the value field
         if event.input.id == "record-value":
             self._perform_dns_lookup(event.value)
+        # Perform DNS lookup on the label field
+        elif event.input.id == "record-label":
+            self._perform_label_lookup(event.value)
+
+    def _perform_label_lookup(self, label: str) -> None:
+        """Perform DNS lookup for a label and update fields with discovered values.
+
+        Args:
+            label: The label entered in the label field
+        """
+        # Clear previous messages
+        if self._error:
+            self._error.update("")
+        if self._info:
+            self._info.update("")
+
+        # Skip lookup for empty values
+        if not label or not label.strip():
+            return
+
+        # Show checking indicator
+        if self._info:
+            self._info.update("[yellow]⏳ Looking up label...[/yellow]")
+
+        label = label.strip()
+
+        # Perform DNS lookup for the label in this zone
+        record_type, value = dns_lookup_label(label, self.zone_name)
+
+        # Update type and value fields if we found something
+        if record_type and value:
+            type_input = self.query_one("#record-type", Input)
+            value_input = self.query_one("#record-value", Input)
+
+            # Only auto-fill if fields are empty or contain default values
+            if not type_input.value.strip() or type_input.value.strip().upper() in ("A", ""):
+                type_input.value = record_type
+
+            if not value_input.value.strip():
+                value_input.value = value
+
+            # Show success message
+            if self._info:
+                self._info.update(
+                    f"[green]✓[/green] [cyan]Found {record_type} record: {value}[/cyan]"
+                )
+        else:
+            # Show no records found message
+            if self._info:
+                self._info.update("[yellow]○[/yellow] [dim]No existing DNS records found[/dim]")
 
     def _perform_dns_lookup(self, value: str) -> None:
         """Perform DNS lookup and update type field and info message.

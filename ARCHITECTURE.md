@@ -57,8 +57,13 @@ Generates and executes nsupdate scripts:
 DNS lookup utilities for auto-filling form fields:
 
 - `is_ipv4()`: Validates IPv4 address format
-- `reverse_dns_lookup()`: Performs reverse DNS lookup (IP → hostname)
-- `forward_dns_lookup()`: Performs forward DNS lookup (hostname → IP)
+- `reverse_dns_lookup()`: Performs reverse DNS lookup (IP → hostname) using socket
+- `forward_dns_lookup()`: Performs forward DNS lookup (hostname → IP) using socket
+- `dig_lookup()`: Executes dig command to lookup DNS records
+- `lookup_nameservers()`: Looks up NS records for a domain using dig
+- `lookup_a_records()`: Looks up A records for a domain using dig
+- `lookup_cname_records()`: Looks up CNAME records for a domain using dig
+- `dns_lookup_label()`: Looks up DNS information for a label within a zone
 - `dns_lookup()`: Main lookup function that suggests record type and provides related DNS information
 - Gracefully handles lookup failures and network errors
 
@@ -78,12 +83,17 @@ Typer-based command-line interface with commands:
 Textual-based interactive dashboard:
 
 - `ZoneDashboard`: Main application screen
-- `ZoneFormScreen`: Modal for adding/editing zones
-- `RecordFormScreen`: Modal for adding/editing records with DNS lookup integration
+- `ZoneFormScreen`: Modal for adding/editing zones with automatic DNS lookup for nameservers and A records
+- `RecordFormScreen`: Modal for adding/editing records with DNS lookup integration for both labels and values
 - `ConfirmDeleteScreen`: Confirmation dialogs
 - Real-time zone and record management
 - Tab navigation between zones and records
-- Smart DNS lookup that auto-fills record type and shows related DNS information
+- Smart DNS lookup that:
+  - Auto-fills nameserver field from NS records when creating zones
+  - Auto-creates apex A record if discovered when creating zones
+  - Auto-fills record type and value when entering labels
+  - Auto-fills record type when entering values
+  - Provides visual feedback for all DNS lookups
 
 ## Data Flow
 
