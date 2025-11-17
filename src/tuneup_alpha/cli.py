@@ -13,7 +13,7 @@ from .models import RecordChange, Zone
 from .nsupdate import NsupdateClient, NsupdatePlan
 from .tui import run_dashboard
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 app = typer.Typer(help="Manage dynamic DNS zones via nsupdate.")
 console = Console()
