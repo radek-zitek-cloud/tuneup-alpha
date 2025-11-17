@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from tuneup_alpha.models import Record, Zone
-from tuneup_alpha.tui import RecordFormScreen, ZoneFormScreen
+from tuneup_alpha.tui import ZoneFormScreen
 
 
 def test_zone_form_preserves_records_on_edit(tmp_path: Path) -> None:

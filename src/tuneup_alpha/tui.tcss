@@ -19,19 +19,9 @@ Footer {
     border: solid $primary;
 }
 
-#zones-separator {
-    color: $primary;
-    margin: 1 0;
-}
-
 #records-table {
     height: 30%;
     border: solid $secondary;
-}
-
-#records-separator {
-    color: $secondary;
-    margin: 1 0;
 }
 
 #zone-configuration {

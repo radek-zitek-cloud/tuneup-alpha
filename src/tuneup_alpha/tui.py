@@ -9,7 +9,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Button, DataTable, Footer, Header, Input, Rule, Static
+from textual.widgets import Button, DataTable, Footer, Header, Input, Static
 
 from .config import ConfigError, ConfigRepository
 from .models import AppConfig, Record, Zone
@@ -376,15 +376,13 @@ class ZoneDashboard(App):
 
     CSS_PATH = "tui.tcss"
     BINDINGS = [
-        Binding("tab", "toggle_focus", "Toggle focus", priority=True),
-        # Zone operations
-        Binding("z,a", "add_zone", "Add zone", key_display="z+a"),
-        Binding("z,e", "edit_zone", "Edit zone", key_display="z+e"),
-        Binding("z,d", "delete_zone", "Delete zone", key_display="z+d"),
-        # Record operations
-        Binding("r,a", "add_record", "Add record", key_display="r+a"),
-        Binding("r,e", "edit_record", "Edit record", key_display="r+e"),
-        Binding("r,d", "delete_record", "Delete record", key_display="r+d"),
+        # Pane focus
+        Binding("z", "focus_zones", "Focus zones"),
+        Binding("r", "focus_records", "Focus records"),
+        # Operations (context-aware based on focused pane)
+        Binding("a", "add", "Add"),
+        Binding("e", "edit", "Edit"),
+        Binding("d", "delete", "Delete"),
         # Other operations
         Binding("l", "refresh", "Reload config"),
         Binding("q", "quit", "Quit"),
@@ -405,12 +403,10 @@ class ZoneDashboard(App):
         self._table.cursor_type = "row"
         self._table.add_columns("Zone", "Server", "Records", "Key File")
         yield self._table
-        yield Rule(id="zones-separator")
         self._records_table = DataTable(id="records-table", zebra_stripes=True)
         self._records_table.cursor_type = "row"
         self._records_table.add_columns("Label", "Type", "Value", "TTL")
         yield self._records_table
-        yield Rule(id="records-separator")
         self._config_details = Static(id="zone-configuration")
         yield self._config_details
         yield Footer()
@@ -423,16 +419,40 @@ class ZoneDashboard(App):
     def action_refresh(self) -> None:
         self.refresh_zones()
 
-    def action_toggle_focus(self) -> None:
-        if self._focus_mode == "zones":
-            if not self._records_table or not self._config.zones:
-                self.notify("Select a zone with records to edit", severity="warning")
-                return
-            self._focus_mode = "records"
-            self._records_table.focus()
-        elif self._focus_mode == "records" and self._table:
+    def action_focus_zones(self) -> None:
+        """Focus the zones pane."""
+        if self._table:
             self._focus_mode = "zones"
             self._table.focus()
+
+    def action_focus_records(self) -> None:
+        """Focus the records pane."""
+        if not self._records_table or not self._config.zones:
+            self.notify("Select a zone with records to edit", severity="warning")
+            return
+        self._focus_mode = "records"
+        self._records_table.focus()
+
+    def action_add(self) -> None:
+        """Add a zone or record based on which pane has focus."""
+        if self._focus_mode == "zones":
+            self.action_add_zone()
+        elif self._focus_mode == "records":
+            self._add_record()
+
+    def action_edit(self) -> None:
+        """Edit a zone or record based on which pane has focus."""
+        if self._focus_mode == "zones":
+            self.action_edit_zone()
+        elif self._focus_mode == "records":
+            self._edit_record()
+
+    def action_delete(self) -> None:
+        """Delete a zone or record based on which pane has focus."""
+        if self._focus_mode == "zones":
+            self.action_delete_zone()
+        elif self._focus_mode == "records":
+            self._delete_record()
 
     def action_add_zone(self) -> None:
         self.push_screen(ZoneFormScreen("add"), self._handle_zone_saved)
@@ -454,15 +474,6 @@ class ZoneDashboard(App):
             self._handle_delete(zone, confirmed)
 
         self.push_screen(ConfirmDeleteScreen(zone.name), _on_confirm)
-
-    def action_add_record(self) -> None:
-        self._add_record()
-
-    def action_edit_record(self) -> None:
-        self._edit_record()
-
-    def action_delete_record(self) -> None:
-        self._delete_record()
 
     def refresh_zones(
         self, select_name: str | None = None, record_index: int | None = None
