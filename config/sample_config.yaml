@@ -14,15 +14,61 @@ zones:
     notes: Sandbox zone managed by TuneUp Alpha.
     default_ttl: 3600
     records:
+      # A record (IPv4)
       - label: "@"
         type: A
         value: 198.51.100.10
         ttl: 600
+      
+      # AAAA record (IPv6)
+      - label: "@"
+        type: AAAA
+        value: 2001:db8::1
+        ttl: 600
+      
+      # CNAME record
       - label: www
         type: CNAME
         value: "@"
         ttl: 300
+      
+      # MX record
+      - label: "@"
+        type: MX
+        value: mail.example.com
+        priority: 10
+        ttl: 3600
+      
+      # Mail server A record
       - label: mail
         type: A
         value: 198.51.100.20
         ttl: 300
+      
+      # TXT record (SPF)
+      - label: "@"
+        type: TXT
+        value: "v=spf1 include:_spf.example.com ~all"
+        ttl: 3600
+      
+      # SRV record
+      - label: _http._tcp
+        type: SRV
+        value: server.example.com
+        priority: 10
+        weight: 60
+        port: 80
+        ttl: 3600
+      
+      # NS record for subdomain delegation
+      - label: subdomain
+        type: NS
+        value: ns1.example.com
+        ttl: 3600
+      
+      # CAA record
+      - label: "@"
+        type: CAA
+        value: "0 issue letsencrypt.org"
+        ttl: 3600
+

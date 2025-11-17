@@ -9,8 +9,13 @@ from tuneup_alpha.dns_lookup import (
     forward_dns_lookup,
     is_ipv4,
     lookup_a_records,
+    lookup_aaaa_records,
+    lookup_caa_records,
     lookup_cname_records,
+    lookup_mx_records,
     lookup_nameservers,
+    lookup_srv_records,
+    lookup_txt_records,
     reverse_dns_lookup,
 )
 
@@ -268,3 +273,91 @@ def test_dns_lookup_label_empty_inputs():
     record_type, value = dns_lookup_label("www", "")
     assert record_type is None
     assert value is None
+
+
+def test_is_ipv6_valid():
+    """Test is_ipv6 with valid IPv6 addresses."""
+    from tuneup_alpha.dns_lookup import is_ipv6
+
+    assert is_ipv6("2001:0db8:85a3:0000:0000:8a2e:0370:7334") is True
+    assert is_ipv6("2001:db8:85a3::8a2e:370:7334") is True
+    assert is_ipv6("::1") is True
+    assert is_ipv6("fe80::1") is True
+    assert is_ipv6("::ffff:192.0.2.1") is True
+
+
+def test_is_ipv6_invalid():
+    """Test is_ipv6 with invalid inputs."""
+    from tuneup_alpha.dns_lookup import is_ipv6
+
+    assert is_ipv6("192.168.1.1") is False
+    assert is_ipv6("example.com") is False
+    assert is_ipv6("not-an-ipv6") is False
+    assert is_ipv6("") is False
+
+
+def test_dns_lookup_with_ipv6():
+    """Test dns_lookup with IPv6 address."""
+    suggested_type, result = dns_lookup("2001:db8::1")
+    assert suggested_type == "AAAA"
+    assert result == {}
+
+
+def test_lookup_aaaa_records():
+    """Test lookup_aaaa_records function."""
+    with patch("tuneup_alpha.dns_lookup.dig_lookup") as mock_dig:
+        mock_dig.return_value = ["2001:db8::1", "2001:db8::2"]
+        result = lookup_aaaa_records("example.com")
+        assert result == ["2001:db8::1", "2001:db8::2"]
+        mock_dig.assert_called_once_with("example.com", "AAAA")
+
+
+def test_lookup_mx_records():
+    """Test lookup_mx_records function."""
+    with patch("tuneup_alpha.dns_lookup.dig_lookup") as mock_dig:
+        mock_dig.return_value = ["10 mail.example.com", "20 mail2.example.com"]
+        result = lookup_mx_records("example.com")
+        assert result == ["10 mail.example.com", "20 mail2.example.com"]
+        mock_dig.assert_called_once_with("example.com", "MX")
+
+
+def test_lookup_txt_records():
+    """Test lookup_txt_records function."""
+    with patch("tuneup_alpha.dns_lookup.dig_lookup") as mock_dig:
+        mock_dig.return_value = ["v=spf1 include:_spf.example.com ~all"]
+        result = lookup_txt_records("example.com")
+        assert result == ["v=spf1 include:_spf.example.com ~all"]
+        mock_dig.assert_called_once_with("example.com", "TXT")
+
+
+def test_lookup_srv_records():
+    """Test lookup_srv_records function."""
+    with patch("tuneup_alpha.dns_lookup.dig_lookup") as mock_dig:
+        mock_dig.return_value = ["10 60 80 server.example.com"]
+        result = lookup_srv_records("_http._tcp.example.com")
+        assert result == ["10 60 80 server.example.com"]
+        mock_dig.assert_called_once_with("_http._tcp.example.com", "SRV")
+
+
+def test_lookup_caa_records():
+    """Test lookup_caa_records function."""
+    with patch("tuneup_alpha.dns_lookup.dig_lookup") as mock_dig:
+        mock_dig.return_value = ["0 issue letsencrypt.org"]
+        result = lookup_caa_records("example.com")
+        assert result == ["0 issue letsencrypt.org"]
+        mock_dig.assert_called_once_with("example.com", "CAA")
+
+
+def test_dns_lookup_label_with_aaaa_record():
+    """Test dns_lookup_label finding an AAAA record."""
+    with (
+        patch("tuneup_alpha.dns_lookup.lookup_cname_records") as mock_cname,
+        patch("tuneup_alpha.dns_lookup.lookup_a_records") as mock_a,
+        patch("tuneup_alpha.dns_lookup.lookup_aaaa_records") as mock_aaaa,
+    ):
+        mock_cname.return_value = []
+        mock_a.return_value = []
+        mock_aaaa.return_value = ["2001:db8::1"]
+        record_type, value = dns_lookup_label("www", "example.com")
+        assert record_type == "AAAA"
+        assert value == "2001:db8::1"

@@ -240,7 +240,7 @@ tuneup-alpha --config-path /path/to/config.yaml apply example.com --no-dry-run
 
 ## Configuration Schema
 
-Each zone captures the authoritative server, the key file `nsupdate` should use, optional notes, and the managed records. Records currently support `A` and `CNAME` types.
+Each zone captures the authoritative server, the key file `nsupdate` should use, optional notes, and the managed records. Records support multiple DNS record types including A, AAAA, CNAME, MX, TXT, SRV, NS, and CAA.
 
 ```yaml
 zones:
@@ -250,18 +250,58 @@ zones:
     notes: Sandbox zone managed by TuneUp Alpha.
     default_ttl: 3600
     records:
+      # A record (IPv4)
       - label: "@"
         type: A
         value: 198.51.100.10
         ttl: 600
+      
+      # AAAA record (IPv6)
+      - label: "@"
+        type: AAAA
+        value: 2001:db8::1
+        ttl: 600
+      
+      # CNAME record
       - label: www
         type: CNAME
         value: "@"
         ttl: 300
-      - label: mail
-        type: A
-        value: 198.51.100.20
-        ttl: 300
+      
+      # MX record
+      - label: "@"
+        type: MX
+        value: mail.example.com
+        priority: 10
+        ttl: 3600
+      
+      # TXT record (SPF)
+      - label: "@"
+        type: TXT
+        value: "v=spf1 include:_spf.example.com ~all"
+        ttl: 3600
+      
+      # SRV record
+      - label: _http._tcp
+        type: SRV
+        value: server.example.com
+        priority: 10
+        weight: 60
+        port: 80
+        ttl: 3600
+      
+      # NS record
+      - label: subdomain
+        type: NS
+        value: ns1.example.com
+        ttl: 3600
+      
+      # CAA record
+      - label: "@"
+        type: CAA
+        value: "0 issue letsencrypt.org"
+        ttl: 3600
+
 logging:
   enabled: true
   level: INFO
@@ -336,10 +376,18 @@ All DNS operations are logged with detailed metadata:
 
 ### Record Types
 
+TuneUp Alpha supports the following DNS record types:
+
 **A Records**: Maps a hostname to an IPv4 address
 
 - `label`: The hostname (use `@` for the zone apex)
 - `value`: Must be a valid IPv4 address (e.g., `192.168.1.1`)
+- `ttl`: Time to live in seconds (minimum 60)
+
+**AAAA Records**: Maps a hostname to an IPv6 address
+
+- `label`: The hostname (use `@` for the zone apex)
+- `value`: Must be a valid IPv6 address (e.g., `2001:db8::1`)
 - `ttl`: Time to live in seconds (minimum 60)
 
 **CNAME Records**: Creates an alias to another hostname
@@ -348,12 +396,50 @@ All DNS operations are logged with detailed metadata:
 - `value`: Target hostname or `@` for the zone apex
 - `ttl`: Time to live in seconds (minimum 60)
 
+**MX Records**: Mail exchange records for email routing
+
+- `label`: Domain name (usually `@` for the zone apex)
+- `value`: Mail server hostname (e.g., `mail.example.com`)
+- `priority`: Mail server priority (lower values have higher priority)
+- `ttl`: Time to live in seconds (minimum 60)
+
+**TXT Records**: Text records for SPF, DKIM, DMARC, and verification
+
+- `label`: The hostname or `@` for the zone apex
+- `value`: Text content (supports up to 4096 characters, automatically quoted)
+- `ttl`: Time to live in seconds (minimum 60)
+- Supports long values that are automatically split into multiple strings
+
+**SRV Records**: Service location records
+
+- `label`: Service name (e.g., `_http._tcp`)
+- `value`: Target hostname
+- `priority`: Service priority
+- `weight`: Load balancing weight
+- `port`: Service port number
+- `ttl`: Time to live in seconds (minimum 60)
+
+**NS Records**: Nameserver delegation records
+
+- `label`: Domain or subdomain name
+- `value`: Nameserver hostname
+- `ttl`: Time to live in seconds (minimum 60)
+
+**CAA Records**: Certificate Authority Authorization
+
+- `label`: Domain name (usually `@` for the zone apex)
+- `value`: CAA record in format `flags tag value` (e.g., `0 issue letsencrypt.org`)
+- `ttl`: Time to live in seconds (minimum 60)
+- Valid tags: `issue`, `issuewild`, `iodef`
+
 ### Validation Rules
 
 - **Labels**: Must contain only alphanumeric characters, hyphens, and underscores. Maximum 63 characters. Cannot start or end with a hyphen.
 - **IPv4 Addresses**: Must be in dotted-decimal notation with octets in range 0-255
+- **IPv6 Addresses**: Must be a valid IPv6 address in standard or compressed notation
 - **Hostnames**: Must follow standard DNS naming conventions
 - **TTL**: Minimum value is 60 seconds
+- **Priority, Weight, Port**: Must be non-negative integers (port range: 1-65535)
 
 ## Development Workflow
 
@@ -399,11 +485,9 @@ For a comprehensive roadmap of planned features and improvements, see [TODO.md](
 
 Key upcoming features include:
 
-- Additional DNS record types (MX, TXT, AAAA, SRV, NS, CAA)
 - DNS state validation and diff functionality
 - Enhanced security features and secrets management
 - Backup and restore functionality
 - Container packaging for deployment
-- Logging support and audit trails
 
 See the [TODO.md](TODO.md) file for the complete list of planned improvements.
