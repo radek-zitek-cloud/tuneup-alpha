@@ -279,7 +279,15 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         Binding("escape", "cancel", "Cancel", show=False, priority=True),
     ]
 
-    _FIELD_IDS = ["record-label", "record-type", "record-value", "record-ttl"]
+    _FIELD_IDS = [
+        "record-label",
+        "record-type",
+        "record-value",
+        "record-ttl",
+        "record-priority",
+        "record-weight",
+        "record-port",
+    ]
 
     def __init__(
         self,
@@ -316,13 +324,13 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
                 placeholder="@ or www",
                 value=self._initial_record.label if self._initial_record else "",
             )
-            yield Static("Type (A or CNAME)")
+            yield Static("Type (A, AAAA, CNAME, MX, TXT, SRV, NS, CAA)")
             yield Input(
                 id="record-type",
                 placeholder="A",
                 value=self._initial_record.type if self._initial_record else "A",
             )
-            yield Static("Value (IPv4 or hostname)")
+            yield Static("Value (IPv4, IPv6, hostname, or text)")
             yield Input(
                 id="record-value",
                 placeholder="198.51.100.10",
@@ -333,6 +341,30 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
                 id="record-ttl",
                 placeholder="300",
                 value=str(self._initial_record.ttl) if self._initial_record else "300",
+            )
+            yield Static("Priority (for MX and SRV records, optional)")
+            yield Input(
+                id="record-priority",
+                placeholder="10",
+                value=str(self._initial_record.priority)
+                if self._initial_record and self._initial_record.priority is not None
+                else "",
+            )
+            yield Static("Weight (for SRV records, optional)")
+            yield Input(
+                id="record-weight",
+                placeholder="0",
+                value=str(self._initial_record.weight)
+                if self._initial_record and self._initial_record.weight is not None
+                else "",
+            )
+            yield Static("Port (for SRV records, optional)")
+            yield Input(
+                id="record-port",
+                placeholder="80",
+                value=str(self._initial_record.port)
+                if self._initial_record and self._initial_record.port is not None
+                else "",
             )
             with Horizontal(id="modal-actions"):
                 yield Button("Cancel", id="cancel")
@@ -415,7 +447,7 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         self._show_lookup_info(suggested_type, lookup_result)
 
     def _show_lookup_info(
-        self, suggested_type: Literal["A", "CNAME"] | None, lookup_result: dict
+        self, suggested_type: Literal["A", "AAAA", "CNAME"] | None, lookup_result: dict
     ) -> None:
         if not self._info:
             return
@@ -428,6 +460,8 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
                 messages.append(f"[green]✓[/green] [cyan]Reverse DNS: {hostname}[/cyan]")
             else:
                 messages.append("[yellow]○[/yellow] [dim]No reverse DNS found[/dim]")
+        elif suggested_type == "AAAA":
+            messages.append("[green]✓[/green] [cyan]IPv6 address detected[/cyan]")
         elif suggested_type == "CNAME":
             ip = lookup_result.get("ip")
             if ip:
@@ -464,13 +498,17 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         rtype = self._value("#record-type").upper() or "A"
         value = self._value("#record-value")
         ttl_text = self._value("#record-ttl") or "300"
+        priority_text = self._value("#record-priority")
+        weight_text = self._value("#record-weight")
+        port_text = self._value("#record-port")
 
         if not label:
             raise ValueError("Record label is required.")
-        if rtype not in ("A", "CNAME"):
-            raise ValueError("Record type must be A or CNAME.")
+        if rtype not in ("A", "AAAA", "CNAME", "MX", "TXT", "SRV", "NS", "CAA"):
+            raise ValueError("Record type must be one of: A, AAAA, CNAME, MX, TXT, SRV, NS, CAA.")
         if not value:
             raise ValueError("Record value is required.")
+
         try:
             ttl = int(ttl_text)
         except ValueError as exc:  # pragma: no cover - user input parsing
@@ -478,7 +516,38 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         if ttl <= 0:
             raise ValueError("TTL must be positive.")
 
-        return Record(label=label, type=cast(RecordType, rtype), value=value, ttl=ttl)
+        # Parse optional fields
+        priority = None
+        weight = None
+        port = None
+
+        if priority_text:
+            try:
+                priority = int(priority_text)
+            except ValueError as exc:
+                raise ValueError("Priority must be an integer.") from exc
+
+        if weight_text:
+            try:
+                weight = int(weight_text)
+            except ValueError as exc:
+                raise ValueError("Weight must be an integer.") from exc
+
+        if port_text:
+            try:
+                port = int(port_text)
+            except ValueError as exc:
+                raise ValueError("Port must be an integer.") from exc
+
+        return Record(
+            label=label,
+            type=cast(RecordType, rtype),
+            value=value,
+            ttl=ttl,
+            priority=priority,
+            weight=weight,
+            port=port,
+        )
 
     def _value(self, selector: str) -> str:
         return self.query_one(selector, Input).value.strip()

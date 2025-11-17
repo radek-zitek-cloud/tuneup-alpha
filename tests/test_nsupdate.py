@@ -100,3 +100,103 @@ def test_plan_uses_zone_default_ttl() -> None:
     script = plan.render()
     # Should use record's explicit TTL, not zone default
     assert "300 A 1.2.3.4" in script
+
+
+# Tests for new record types
+
+
+def test_plan_render_aaaa_record() -> None:
+    zone = _zone()
+    plan = NsupdatePlan(zone)
+    record = Record(label="@", type="AAAA", value="2001:db8::1", ttl=300)
+    plan.add_change(RecordChange(action="create", record=record))
+    script = plan.render()
+    assert "update add example.com. 300 AAAA 2001:db8::1" in script
+
+
+def test_plan_render_mx_record() -> None:
+    zone = _zone()
+    plan = NsupdatePlan(zone)
+    record = Record(label="@", type="MX", value="mail.example.com", priority=10, ttl=300)
+    plan.add_change(RecordChange(action="create", record=record))
+    script = plan.render()
+    assert "update add example.com. 300 MX 10 mail.example.com" in script
+
+
+def test_plan_render_mx_record_with_different_priorities() -> None:
+    zone = _zone()
+    plan = NsupdatePlan(zone)
+    record1 = Record(label="@", type="MX", value="mail1.example.com", priority=10, ttl=300)
+    record2 = Record(label="@", type="MX", value="mail2.example.com", priority=20, ttl=300)
+    plan.add_change(RecordChange(action="create", record=record1))
+    plan.add_change(RecordChange(action="create", record=record2))
+    script = plan.render()
+    assert "update add example.com. 300 MX 10 mail1.example.com" in script
+    assert "update add example.com. 300 MX 20 mail2.example.com" in script
+
+
+def test_plan_render_txt_record() -> None:
+    zone = _zone()
+    plan = NsupdatePlan(zone)
+    record = Record(label="@", type="TXT", value="v=spf1 include:_spf.example.com ~all", ttl=300)
+    plan.add_change(RecordChange(action="create", record=record))
+    script = plan.render()
+    assert 'update add example.com. 300 TXT "v=spf1 include:_spf.example.com ~all"' in script
+
+
+def test_plan_render_txt_record_with_quotes() -> None:
+    zone = _zone()
+    plan = NsupdatePlan(zone)
+    record = Record(label="@", type="TXT", value='test "quoted" value', ttl=300)
+    plan.add_change(RecordChange(action="create", record=record))
+    script = plan.render()
+    # Quotes should be escaped
+    assert 'update add example.com. 300 TXT "test \\"quoted\\" value"' in script
+
+
+def test_plan_render_txt_record_long_value() -> None:
+    zone = _zone()
+    plan = NsupdatePlan(zone)
+    # Create a value longer than 255 characters
+    long_value = "x" * 300
+    record = Record(label="@", type="TXT", value=long_value, ttl=300)
+    plan.add_change(RecordChange(action="create", record=record))
+    script = plan.render()
+    # Should split into multiple quoted strings
+    assert 'update add example.com. 300 TXT "' in script
+    assert script.count('"') >= 4  # At least 2 quoted strings
+
+
+def test_plan_render_srv_record() -> None:
+    zone = _zone()
+    plan = NsupdatePlan(zone)
+    record = Record(
+        label="_http._tcp",
+        type="SRV",
+        value="server.example.com",
+        priority=10,
+        weight=60,
+        port=80,
+        ttl=300,
+    )
+    plan.add_change(RecordChange(action="create", record=record))
+    script = plan.render()
+    assert "update add _http._tcp.example.com. 300 SRV 10 60 80 server.example.com" in script
+
+
+def test_plan_render_ns_record() -> None:
+    zone = _zone()
+    plan = NsupdatePlan(zone)
+    record = Record(label="subdomain", type="NS", value="ns1.example.com", ttl=300)
+    plan.add_change(RecordChange(action="create", record=record))
+    script = plan.render()
+    assert "update add subdomain.example.com. 300 NS ns1.example.com" in script
+
+
+def test_plan_render_caa_record() -> None:
+    zone = _zone()
+    plan = NsupdatePlan(zone)
+    record = Record(label="@", type="CAA", value="0 issue letsencrypt.org", ttl=300)
+    plan.add_change(RecordChange(action="create", record=record))
+    script = plan.render()
+    assert "update add example.com. 300 CAA 0 issue letsencrypt.org" in script

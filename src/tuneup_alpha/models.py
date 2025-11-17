@@ -6,9 +6,9 @@ import re
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-RecordType = Literal["A", "CNAME"]
+RecordType = Literal["A", "AAAA", "CNAME", "MX", "TXT", "SRV", "NS", "CAA"]
 RecordAction = Literal["create", "delete", "update"]
 
 
@@ -21,8 +21,12 @@ class Record(BaseModel):
         min_length=1,
     )
     type: RecordType = Field(..., description="DNS record type.")
-    value: str = Field(..., description="Target IPv4 or hostname value.")
+    value: str = Field(..., description="Target IPv4, IPv6, hostname, or text value.")
     ttl: int = Field(300, ge=60, description="Record TTL in seconds.")
+    # Optional fields for specific record types
+    priority: int | None = Field(None, ge=0, description="Priority for MX and SRV records.")
+    weight: int | None = Field(None, ge=0, description="Weight for SRV records.")
+    port: int | None = Field(None, ge=1, le=65535, description="Port for SRV records.")
 
     @property
     def is_apex(self) -> bool:
@@ -82,6 +86,12 @@ class Record(BaseModel):
             for octet in match.groups():
                 if int(octet) > 255:
                     raise ValueError(f"Invalid IPv4 address '{v}' - octet out of range")
+        elif record_type == "AAAA":
+            # Validate IPv6 address format
+            # Basic IPv6 validation - accepts full and compressed forms
+            ipv6_pattern = r"^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$"
+            if not re.match(ipv6_pattern, v):
+                raise ValueError(f"Invalid IPv6 address '{v}'")
         elif record_type == "CNAME":
             # CNAME can be @ or a valid hostname
             if v != "@":
@@ -89,8 +99,68 @@ class Record(BaseModel):
                 hostname_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.?$"
                 if not re.match(hostname_pattern, v):
                     raise ValueError(f"Invalid hostname '{v}' for CNAME record")
+        elif record_type == "MX":
+            # MX value is a mail server hostname
+            if v != "@":
+                hostname_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.?$"
+                if not re.match(hostname_pattern, v):
+                    raise ValueError(f"Invalid mail server hostname '{v}' for MX record")
+        elif record_type == "NS":
+            # NS value is a nameserver hostname
+            if v != "@":
+                hostname_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.?$"
+                if not re.match(hostname_pattern, v):
+                    raise ValueError(f"Invalid nameserver hostname '{v}' for NS record")
+        elif record_type == "SRV":
+            # SRV value is a target hostname
+            if v != "@" and v != ".":
+                hostname_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.?$"
+                if not re.match(hostname_pattern, v):
+                    raise ValueError(f"Invalid target hostname '{v}' for SRV record")
+        elif record_type == "TXT":
+            # TXT records can contain any text, but check for reasonable length
+            # DNS TXT records have a limit of 255 characters per string, but multiple strings can be used
+            if len(v) > 4096:  # Reasonable upper limit for total TXT record length
+                raise ValueError(
+                    f"TXT record value too long ({len(v)} characters). Maximum is 4096."
+                )
+        elif record_type == "CAA":
+            # CAA format: flags tag value (e.g., "0 issue ca.example.com")
+            # The value field should contain: flags tag value (space-separated)
+            parts = v.split(None, 2)
+            if len(parts) != 3:
+                raise ValueError(
+                    f"Invalid CAA record format '{v}'. Expected: 'flags tag value' (e.g., '0 issue ca.example.com')"
+                )
+            flags, tag, value = parts
+            # Validate flags (should be 0-255)
+            try:
+                flag_int = int(flags)
+            except ValueError as exc:
+                raise ValueError(f"CAA flags must be numeric, got '{flags}'") from exc
+
+            if flag_int < 0 or flag_int > 255:
+                raise ValueError(f"CAA flags must be 0-255, got {flags}")
+
+            # Validate tag (issue, issuewild, iodef)
+            if tag not in ("issue", "issuewild", "iodef"):
+                raise ValueError(f"CAA tag must be 'issue', 'issuewild', or 'iodef', got '{tag}'")
 
         return v
+
+    @model_validator(mode="after")
+    def validate_required_fields(self) -> Record:
+        """Validate that required fields are present for specific record types."""
+        if self.type == "MX" and self.priority is None:
+            raise ValueError("MX records require a priority value")
+        if self.type == "SRV":
+            if self.priority is None:
+                raise ValueError("SRV records require a priority value")
+            if self.weight is None:
+                raise ValueError("SRV records require a weight value")
+            if self.port is None:
+                raise ValueError("SRV records require a port value")
+        return self
 
 
 class Zone(BaseModel):
