@@ -127,4 +127,4 @@ def test_config_default_prefix_key_path(tmp_path: Path) -> None:
     repo.save(config)
 
     loaded = repo.load()
-    assert loaded.prefix_key_path == "/etc/nsupdate"
+    assert loaded.prefix_key_path == "~/.config/nsupdate"

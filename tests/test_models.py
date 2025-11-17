@@ -188,7 +188,7 @@ def test_record_cname_validation() -> None:
 
 def test_app_config_default_prefix_key_path() -> None:
     config = AppConfig()
-    assert config.prefix_key_path == "/etc/nsupdate"
+    assert config.prefix_key_path == "~/.config/nsupdate"
 
 
 def test_app_config_custom_prefix_key_path() -> None:

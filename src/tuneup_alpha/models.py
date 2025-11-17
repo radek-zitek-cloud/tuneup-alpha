@@ -118,5 +118,5 @@ class AppConfig(BaseModel):
     zones: list[Zone] = Field(default_factory=list)
     theme: str = Field(default="textual-dark", description="UI theme name")
     prefix_key_path: str = Field(
-        default="/etc/nsupdate", description="Default path prefix for nsupdate key files"
+        default="~/.config/nsupdate", description="Default path prefix for nsupdate key files"
     )
