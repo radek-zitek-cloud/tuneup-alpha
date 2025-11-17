@@ -6,7 +6,11 @@ import subprocess
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from .logging_config import AuditLogger, get_logger
 from .models import Record, RecordChange, Zone
+
+logger = get_logger(__name__)
+audit_logger = AuditLogger()
 
 
 class NsupdateError(RuntimeError):
@@ -28,11 +32,14 @@ class NsupdatePlan:
         self.changes.append(change)
 
     def render(self) -> str:
+        logger.debug(f"Rendering nsupdate plan for zone {self.zone.name}")
         lines = [f"server {self.zone.server}", f"zone {self.zone.name}"]
         for change in self.changes:
             lines.extend(_render_change(self.zone, change))
         lines.append("send")
-        return "\n".join(lines) + "\n"
+        script = "\n".join(lines) + "\n"
+        logger.debug(f"Generated nsupdate script with {len(self.changes)} change(s)")
+        return script
 
 
 class NsupdateClient:
@@ -45,8 +52,16 @@ class NsupdateClient:
         script = plan.render()
 
         if dry_run:
+            logger.info(f"Dry-run mode: would execute nsupdate for zone {plan.zone.name}")
+            audit_logger.log_nsupdate_execution(
+                zone_name=plan.zone.name,
+                dry_run=True,
+                success=True,
+                details={"change_count": len(plan.changes)},
+            )
             return script
 
+        logger.info(f"Executing nsupdate for zone {plan.zone.name}")
         cmd = [self.executable, "-k", str(plan.zone.key_file)]
         try:
             completed = subprocess.run(  # noqa: S603,S607
@@ -55,7 +70,26 @@ class NsupdateClient:
                 capture_output=True,
                 check=True,
             )
+            logger.info(f"nsupdate completed successfully for zone {plan.zone.name}")
+            audit_logger.log_nsupdate_execution(
+                zone_name=plan.zone.name,
+                dry_run=False,
+                success=True,
+                details={"change_count": len(plan.changes)},
+            )
         except subprocess.CalledProcessError as exc:  # pragma: no cover - error path
+            logger.error(
+                f"nsupdate failed for zone {plan.zone.name}: {exc.stderr.decode() or str(exc)}"
+            )
+            audit_logger.log_nsupdate_execution(
+                zone_name=plan.zone.name,
+                dry_run=False,
+                success=False,
+                details={
+                    "change_count": len(plan.changes),
+                    "error": exc.stderr.decode() or str(exc),
+                },
+            )
             raise NsupdateError(exc.stderr.decode() or str(exc)) from exc
 
         return completed.stdout.decode()

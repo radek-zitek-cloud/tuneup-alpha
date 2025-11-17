@@ -1,4 +1,12 @@
 prefix_key_path: /etc/nsupdate
+logging:
+  enabled: true
+  level: INFO
+  output: console
+  log_file: null
+  max_bytes: 10485760
+  backup_count: 5
+  structured: false
 zones:
   - name: example.com
     server: ns1.example.com

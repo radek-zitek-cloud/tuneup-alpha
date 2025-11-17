@@ -7,6 +7,10 @@ import socket
 import subprocess
 from typing import Literal
 
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
+
 LookupResult = dict[str, str | None]
 DigResult = dict[str, list[str]]
 
@@ -37,12 +41,15 @@ def reverse_dns_lookup(ip_address: str) -> LookupResult:
     Returns:
         Dictionary with 'hostname' key if successful, None if lookup fails
     """
+    logger.debug(f"Performing reverse DNS lookup for IP: {ip_address}")
     try:
         hostname, _, _ = socket.gethostbyaddr(ip_address)
         # Remove trailing dot if present
         hostname = hostname.rstrip(".")
+        logger.debug(f"Reverse DNS lookup successful: {ip_address} -> {hostname}")
         return {"hostname": hostname}
-    except (socket.herror, socket.gaierror, OSError):
+    except (socket.herror, socket.gaierror, OSError) as exc:
+        logger.debug(f"Reverse DNS lookup failed for {ip_address}: {exc}")
         return {"hostname": None}
 
 
@@ -55,12 +62,15 @@ def forward_dns_lookup(hostname: str) -> LookupResult:
     Returns:
         Dictionary with 'ip' key if successful, None if lookup fails
     """
+    logger.debug(f"Performing forward DNS lookup for hostname: {hostname}")
     try:
         # Remove trailing dot if present for lookup
         lookup_hostname = hostname.rstrip(".")
         ip_address = socket.gethostbyname(lookup_hostname)
+        logger.debug(f"Forward DNS lookup successful: {hostname} -> {ip_address}")
         return {"ip": ip_address}
-    except (socket.herror, socket.gaierror, OSError):
+    except (socket.herror, socket.gaierror, OSError) as exc:
+        logger.debug(f"Forward DNS lookup failed for {hostname}: {exc}")
         return {"ip": None}
 
 
@@ -74,6 +84,7 @@ def dig_lookup(domain: str, record_type: str) -> list[str]:
     Returns:
         List of values found for the record type
     """
+    logger.debug(f"Performing dig lookup for {domain} {record_type}")
     try:
         # Run dig command with short output
         result = subprocess.run(
@@ -85,6 +96,7 @@ def dig_lookup(domain: str, record_type: str) -> list[str]:
         )
 
         if result.returncode != 0:
+            logger.debug(f"dig command failed for {domain} {record_type}")
             return []
 
         # Parse output - each line is a result
@@ -95,8 +107,10 @@ def dig_lookup(domain: str, record_type: str) -> list[str]:
                 # Remove trailing dot from hostnames
                 values.append(line.rstrip("."))
 
+        logger.debug(f"dig lookup found {len(values)} record(s) for {domain} {record_type}")
         return values
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+        logger.debug(f"dig lookup failed for {domain} {record_type}: {exc}")
         return []
 
 
