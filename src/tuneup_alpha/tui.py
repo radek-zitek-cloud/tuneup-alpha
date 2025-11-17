@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+from textual.coordinate import Coordinate
 from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Footer, Header, Input, Static
 
 from .config import ConfigError, ConfigRepository
-from .models import AppConfig, Record, Zone
+from .models import AppConfig, Record, RecordType, Zone
 
 ZoneFormResult = tuple[str | None, Zone]
 RecordFormResult = tuple[int | None, Record]
@@ -95,7 +96,7 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
+    def on_input_submitted(self, _event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
         if not self._focus_relative_input(1, wrap=False):
             self._submit()
 
@@ -161,14 +162,11 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         focused = self.app.focused
         current_id = focused.id if isinstance(focused, Input) else None
         try:
-            index = self._FIELD_IDS.index(current_id) if current_id else None  # type: ignore[arg-type]
+            index = self._FIELD_IDS.index(current_id) if current_id else None
         except ValueError:
             index = None
 
-        if index is None:
-            target = 0 if delta > 0 else -1
-        else:
-            target = index + delta
+        target = (0 if delta > 0 else -1) if index is None else index + delta
 
         if target < 0 or target >= len(self._FIELD_IDS):
             if not wrap:
@@ -253,7 +251,7 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         elif event.button.id == "save":
             self._submit()
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
+    def on_input_submitted(self, _event: Input.Submitted) -> None:  # pragma: no cover - UI shortcut
         if not self._focus_relative_input(1, wrap=False):
             self._submit()
 
@@ -293,7 +291,7 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         if ttl <= 0:
             raise ValueError("TTL must be positive.")
 
-        return Record(label=label, type=rtype, value=value, ttl=ttl)
+        return Record(label=label, type=cast(RecordType, rtype), value=value, ttl=ttl)
 
     def _value(self, selector: str) -> str:
         return self.query_one(selector, Input).value.strip()
@@ -306,14 +304,11 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         focused = self.app.focused
         current_id = focused.id if isinstance(focused, Input) else None
         try:
-            index = self._FIELD_IDS.index(current_id) if current_id else None  # type: ignore[arg-type]
+            index = self._FIELD_IDS.index(current_id) if current_id else None
         except ValueError:
             index = None
 
-        if index is None:
-            target = 0 if delta > 0 else -1
-        else:
-            target = index + delta
+        target = (0 if delta > 0 else -1) if index is None else index + delta
 
         if target < 0 or target >= len(self._FIELD_IDS):
             if not wrap:
@@ -470,8 +465,8 @@ class ZoneDashboard(App):
             self.notify("No zone selected", severity="warning")
             return
 
-        def _on_confirm(confirmed: bool) -> None:
-            self._handle_delete(zone, confirmed)
+        def _on_confirm(confirmed: bool | None) -> None:
+            self._handle_delete(zone, confirmed or False)
 
         self.push_screen(ConfirmDeleteScreen(zone.name), _on_confirm)
 
@@ -495,7 +490,7 @@ class ZoneDashboard(App):
                 selected_index = index
 
         if self._table.row_count:
-            self._table.cursor_coordinate = (selected_index, 0)
+            self._table.cursor_coordinate = Coordinate(selected_index, 0)
             self._update_details_for_row(selected_index, record_index)
         else:
             self._show_empty_details()
@@ -540,7 +535,7 @@ class ZoneDashboard(App):
             )
         if self._records_table.row_count:
             target_row = max(0, min(target_row, self._records_table.row_count - 1))
-            self._records_table.cursor_coordinate = (target_row, 0)
+            self._records_table.cursor_coordinate = Coordinate(target_row, 0)
 
     def _format_config(self, zone: Zone) -> str:
         lines = [
@@ -647,8 +642,8 @@ class ZoneDashboard(App):
             return
         zone, record, index = current
 
-        def _on_confirm(confirmed: bool) -> None:
-            self._handle_record_delete(zone.name, index, confirmed)
+        def _on_confirm(confirmed: bool | None) -> None:
+            self._handle_record_delete(zone.name, index, confirmed or False)
 
         self.push_screen(
             ConfirmRecordDeleteScreen(zone.name, record.label),
