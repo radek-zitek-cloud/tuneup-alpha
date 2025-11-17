@@ -136,17 +136,15 @@ class Record(BaseModel):
             # Validate flags (should be 0-255)
             try:
                 flag_int = int(flags)
-            except ValueError:
-                raise ValueError(f"CAA flags must be numeric, got '{flags}'")
-            
+            except ValueError as exc:
+                raise ValueError(f"CAA flags must be numeric, got '{flags}'") from exc
+
             if flag_int < 0 or flag_int > 255:
                 raise ValueError(f"CAA flags must be 0-255, got {flags}")
-            
+
             # Validate tag (issue, issuewild, iodef)
             if tag not in ("issue", "issuewild", "iodef"):
-                raise ValueError(
-                    f"CAA tag must be 'issue', 'issuewild', or 'iodef', got '{tag}'"
-                )
+                raise ValueError(f"CAA tag must be 'issue', 'issuewild', or 'iodef', got '{tag}'")
 
         return v
 

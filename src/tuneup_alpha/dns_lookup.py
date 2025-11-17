@@ -32,6 +32,20 @@ def is_ipv4(value: str) -> bool:
     return all(int(octet) <= 255 for octet in match.groups())
 
 
+def is_ipv6(value: str) -> bool:
+    """Check if a string is a valid IPv6 address.
+
+    Args:
+        value: String to check
+
+    Returns:
+        True if the string is a valid IPv6 address
+    """
+    # Basic IPv6 validation - accepts full and compressed forms
+    ipv6_pattern = r"^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$"
+    return bool(re.match(ipv6_pattern, value))
+
+
 def reverse_dns_lookup(ip_address: str) -> LookupResult:
     """Perform reverse DNS lookup to find hostname from IP.
 
@@ -150,7 +164,69 @@ def lookup_cname_records(domain: str) -> list[str]:
     return dig_lookup(domain, "CNAME")
 
 
-def dns_lookup_label(label: str, zone_name: str) -> tuple[Literal["A", "CNAME"] | None, str | None]:
+def lookup_aaaa_records(domain: str) -> list[str]:
+    """Lookup AAAA records for a domain using dig.
+
+    Args:
+        domain: Domain name to lookup
+
+    Returns:
+        List of IPv6 addresses
+    """
+    return dig_lookup(domain, "AAAA")
+
+
+def lookup_mx_records(domain: str) -> list[str]:
+    """Lookup MX records for a domain using dig.
+
+    Args:
+        domain: Domain name to lookup
+
+    Returns:
+        List of MX records (priority and hostname)
+    """
+    return dig_lookup(domain, "MX")
+
+
+def lookup_txt_records(domain: str) -> list[str]:
+    """Lookup TXT records for a domain using dig.
+
+    Args:
+        domain: Domain name to lookup
+
+    Returns:
+        List of TXT record values
+    """
+    return dig_lookup(domain, "TXT")
+
+
+def lookup_srv_records(domain: str) -> list[str]:
+    """Lookup SRV records for a domain using dig.
+
+    Args:
+        domain: Domain name to lookup
+
+    Returns:
+        List of SRV records
+    """
+    return dig_lookup(domain, "SRV")
+
+
+def lookup_caa_records(domain: str) -> list[str]:
+    """Lookup CAA records for a domain using dig.
+
+    Args:
+        domain: Domain name to lookup
+
+    Returns:
+        List of CAA records
+    """
+    return dig_lookup(domain, "CAA")
+
+
+def dns_lookup_label(
+    label: str, zone_name: str
+) -> tuple[Literal["A", "AAAA", "CNAME", "MX", "TXT", "SRV", "NS", "CAA"] | None, str | None]:
     """Lookup DNS information for a label within a zone.
 
     Args:
@@ -176,10 +252,15 @@ def dns_lookup_label(label: str, zone_name: str) -> tuple[Literal["A", "CNAME"] 
     if a_records:
         return "A", a_records[0]
 
+    # Try AAAA record lookup
+    aaaa_records = lookup_aaaa_records(fqdn)
+    if aaaa_records:
+        return "AAAA", aaaa_records[0]
+
     return None, None
 
 
-def dns_lookup(value: str) -> tuple[Literal["A", "CNAME"] | None, LookupResult]:
+def dns_lookup(value: str) -> tuple[Literal["A", "AAAA", "CNAME"] | None, LookupResult]:
     """Perform DNS lookup and suggest record type and related information.
 
     Args:
@@ -187,17 +268,21 @@ def dns_lookup(value: str) -> tuple[Literal["A", "CNAME"] | None, LookupResult]:
 
     Returns:
         Tuple of (suggested_record_type, lookup_results)
-        - suggested_record_type: "A" if IP address, "CNAME" if hostname, None if unclear
+        - suggested_record_type: "A" if IPv4, "AAAA" if IPv6, "CNAME" if hostname, None if unclear
         - lookup_results: Dictionary with lookup information
     """
     if not value or value == "@":
         return None, {}
 
-    # Check if it's an IP address
+    # Check if it's an IPv4 address
     if is_ipv4(value):
-        # For IP addresses, suggest A record and try reverse DNS
+        # For IPv4 addresses, suggest A record and try reverse DNS
         result = reverse_dns_lookup(value)
         return "A", result
+    elif is_ipv6(value):
+        # For IPv6 addresses, suggest AAAA record
+        # Reverse DNS for IPv6 is complex, so we skip it for now
+        return "AAAA", {}
     else:
         # For hostnames, suggest CNAME and try forward DNS
         result = forward_dns_lookup(value)

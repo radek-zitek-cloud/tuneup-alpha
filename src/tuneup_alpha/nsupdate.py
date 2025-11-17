@@ -115,7 +115,7 @@ def _delete_line(zone: Zone, record: Record) -> str:
 def _add_line(zone: Zone, record: Record) -> str:
     fqdn = _fqdn(zone, record)
     ttl = record.ttl or zone.default_ttl
-    
+
     # Handle record types with special formatting
     if record.type == "MX":
         # MX records need priority before the value
@@ -148,21 +148,21 @@ def _fqdn(zone: Zone, record: Record) -> str:
 
 def _quote_txt_value(value: str) -> str:
     """Quote TXT record value for nsupdate.
-    
+
     TXT records can be split into multiple strings if longer than 255 characters.
     Each string must be quoted.
     """
     # If the value contains quotes, escape them
     escaped = value.replace('"', '\\"')
-    
+
     # Split into chunks of 255 characters if needed
     if len(escaped) <= 255:
         return f'"{escaped}"'
-    
+
     # Split into multiple quoted strings
     chunks = []
     for i in range(0, len(escaped), 255):
-        chunk = escaped[i:i+255]
+        chunk = escaped[i : i + 255]
         chunks.append(f'"{chunk}"')
-    
+
     return " ".join(chunks)

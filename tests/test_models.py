@@ -277,9 +277,7 @@ def test_record_srv_validation() -> None:
 
     # Invalid SRV - missing port
     with pytest.raises(ValidationError, match="SRV records require a port"):
-        Record(
-            label="_http._tcp", type="SRV", value="server.example.com", priority=10, weight=60
-        )
+        Record(label="_http._tcp", type="SRV", value="server.example.com", priority=10, weight=60)
 
 
 def test_record_ns_validation() -> None:
@@ -322,7 +320,9 @@ def test_record_type_validation_updated() -> None:
     Record(label="www", type="CNAME", value="@")
     Record(label="@", type="MX", value="mail.example.com", priority=10)
     Record(label="@", type="TXT", value="v=spf1 ~all")
-    Record(label="_http._tcp", type="SRV", value="server.example.com", priority=0, weight=0, port=80)
+    Record(
+        label="_http._tcp", type="SRV", value="server.example.com", priority=0, weight=0, port=80
+    )
     Record(label="@", type="NS", value="ns1.example.com")
     Record(label="@", type="CAA", value="0 issue ca.example.com")
 
