@@ -456,6 +456,7 @@ class ZoneDashboard(App):
         Binding("d", "delete", "Delete"),
         # Other operations
         Binding("l", "refresh", "Reload config"),
+        Binding("t", "cycle_theme", "Cycle theme"),
         Binding("q", "quit", "Quit"),
     ]
 
@@ -484,11 +485,33 @@ class ZoneDashboard(App):
 
     def on_mount(self) -> None:
         self.refresh_zones()
+        # Load and apply saved theme
+        if self._config.theme:
+            self.theme = self._config.theme
         if self._table and self._table.row_count:
             self._table.focus()
 
     def action_refresh(self) -> None:
         self.refresh_zones()
+
+    def action_cycle_theme(self) -> None:
+        """Cycle to the next theme in the list."""
+        themes = list(self.available_themes)
+        try:
+            current_index = themes.index(self.theme)
+            next_index = (current_index + 1) % len(themes)
+        except ValueError:
+            next_index = 0
+        self.theme = themes[next_index]
+        self.notify(f"Theme changed to: {self.theme}", severity="information")
+
+    def action_quit(self) -> None:
+        """Save theme before quitting."""
+        # Save current theme to config
+        self._config.theme = self.theme
+        self.config_repo.save(self._config)
+        # Call the parent quit action
+        super().action_quit()
 
     def action_focus_zones(self) -> None:
         """Focus the zones pane."""

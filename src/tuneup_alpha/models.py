@@ -116,3 +116,4 @@ class AppConfig(BaseModel):
     """Complete persisted configuration for TuneUp Alpha."""
 
     zones: list[Zone] = Field(default_factory=list)
+    theme: str = Field(default="textual-dark", description="UI theme name")
