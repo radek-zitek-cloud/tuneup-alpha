@@ -12,6 +12,7 @@ TuneUp Alpha is a Python 3.11 toolbox for managing dynamic DNS zones through `ns
 - **Config-first workflow** – store zones, records, and key metadata as structured YAML that lives in source control.
 - **Interactive dashboard** – launch the Textual TUI to inspect zones, records, and metadata without leaving the terminal.
 - **In-app authoring** – press `z` to focus zones or `r` to focus records, then use `a`/`e`/`d` to add, edit, or delete items in the focused pane.
+- **Smart DNS lookup** – when adding or editing records in the TUI, the tool automatically performs DNS lookups to help auto-fill form fields and show related DNS information.
 - **Automation ready** – CLI commands expose `plan`/`apply` operations that can be scripted inside CI or cron jobs.
 
 ## Project Layout
@@ -22,6 +23,7 @@ src/tuneup_alpha/       # Application source
   config.py             # YAML repository helpers
   models.py             # Pydantic data models
   nsupdate.py           # Script builder + executor
+  dns_lookup.py         # DNS lookup utilities
   tui.py                # Textual-based dashboard
   tui.tcss              # TUI styling
   cli.py                # Typer CLI entry point
@@ -140,6 +142,20 @@ Other controls:
 - `l` - Reload configuration from disk
 - `Esc` - Cancel current form/dialog
 - `q` - Quit the application
+
+#### Smart DNS Lookup
+
+When adding or editing records in the TUI, the tool automatically performs DNS lookups as you type in the value field:
+
+- **Enter an IP address** (e.g., `192.0.2.1`):
+  - The record type is automatically set to `A`
+  - Reverse DNS lookup is performed to show the associated hostname (if available)
+
+- **Enter a hostname** (e.g., `www.example.com`):
+  - The record type is automatically set to `CNAME`
+  - Forward DNS lookup is performed to show the associated IP address (if available)
+
+This feature helps ensure accuracy and saves time when creating DNS records.
 
 ### Example 3: Multiple Zones
 
