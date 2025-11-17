@@ -140,8 +140,9 @@ Context-aware operations (work on the currently focused pane):
 Other controls:
 
 - `l` - Reload configuration from disk
+- `t` - Cycle through available themes
 - `Esc` - Cancel current form/dialog
-- `q` - Quit the application
+- `q` - Quit the application (saves current theme)
 
 #### Smart DNS Lookup
 
@@ -156,6 +157,25 @@ When adding or editing records in the TUI, the tool automatically performs DNS l
   - Forward DNS lookup is performed to show the associated IP address (if available)
 
 This feature helps ensure accuracy and saves time when creating DNS records.
+
+#### Theme Customization
+
+The TUI supports multiple color themes that persist across sessions:
+
+- Press `t` while the TUI is running to cycle through available themes
+- The selected theme is automatically saved when you quit the application
+- On next startup, your preferred theme is restored automatically
+
+Available themes include: `textual-dark`, `textual-light`, `nord`, `gruvbox`, `catppuccin-mocha`, `textual-ansi`, `dracula`, `tokyo-night`, `monokai`, `flexoki`, `catppuccin-latte`, and `solarized-light`.
+
+You can also manually set the theme in your configuration file:
+
+```yaml
+theme: nord  # or any other available theme
+zones:
+  - name: example.com
+    ...
+```
 
 ### Example 3: Multiple Zones
 
