@@ -24,6 +24,7 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
     BINDINGS = [
         Binding("tab", "focus_next_field", "Next field", show=False, priority=True),
         Binding("shift+tab", "focus_previous_field", "Previous field", show=False, priority=True),
+        Binding("escape", "cancel", "Cancel", show=False, priority=True),
     ]
 
     _FIELD_IDS = [
@@ -104,6 +105,9 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
     def action_focus_previous_field(self) -> None:  # pragma: no cover - UI shortcut
         self._focus_relative_input(-1, wrap=True)
 
+    def action_cancel(self) -> None:  # pragma: no cover - UI shortcut
+        self.dismiss(None)
+
     def _submit(self) -> None:
         try:
             zone = self._build_zone()
@@ -134,12 +138,16 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         if default_ttl <= 0:
             raise ValueError("Default TTL must be positive.")
 
+        # Preserve existing records when editing a zone
+        existing_records = self._initial_zone.records if self._initial_zone else []
+
         return Zone(
             name=name,
             server=server,
             key_file=Path(key),
             notes=notes or None,
             default_ttl=default_ttl,
+            records=existing_records,
         )
 
     def _value(self, selector: str) -> str:
@@ -178,6 +186,7 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
     BINDINGS = [
         Binding("tab", "focus_next_field", "Next field", show=False, priority=True),
         Binding("shift+tab", "focus_previous_field", "Previous field", show=False, priority=True),
+        Binding("escape", "cancel", "Cancel", show=False, priority=True),
     ]
 
     _FIELD_IDS = ["record-label", "record-type", "record-value", "record-ttl"]
@@ -253,6 +262,9 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
 
     def action_focus_previous_field(self) -> None:  # pragma: no cover - UI shortcut
         self._focus_relative_input(-1, wrap=True)
+
+    def action_cancel(self) -> None:  # pragma: no cover - UI shortcut
+        self.dismiss(None)
 
     def _submit(self) -> None:
         try:
@@ -365,10 +377,16 @@ class ZoneDashboard(App):
     CSS_PATH = "tui.tcss"
     BINDINGS = [
         Binding("tab", "toggle_focus", "Toggle focus", priority=True),
-        Binding("a", "add_entry", "Add zone/record"),
-        Binding("e", "edit_entry", "Edit zone/record"),
-        Binding("d", "delete_entry", "Delete zone/record"),
-        Binding("r", "refresh", "Reload config"),
+        # Zone operations
+        Binding("z,a", "add_zone", "Add zone", key_display="z+a"),
+        Binding("z,e", "edit_zone", "Edit zone", key_display="z+e"),
+        Binding("z,d", "delete_zone", "Delete zone", key_display="z+d"),
+        # Record operations
+        Binding("r,a", "add_record", "Add record", key_display="r+a"),
+        Binding("r,e", "edit_record", "Edit record", key_display="r+e"),
+        Binding("r,d", "delete_record", "Delete record", key_display="r+d"),
+        # Other operations
+        Binding("l", "refresh", "Reload config"),
         Binding("q", "quit", "Quit"),
     ]
 
@@ -416,26 +434,17 @@ class ZoneDashboard(App):
             self._focus_mode = "zones"
             self._table.focus()
 
-    def action_add_entry(self) -> None:
-        if self._focus_mode == "records":
-            self._add_record()
-            return
+    def action_add_zone(self) -> None:
         self.push_screen(ZoneFormScreen("add"), self._handle_zone_saved)
 
-    def action_edit_entry(self) -> None:
-        if self._focus_mode == "records":
-            self._edit_record()
-            return
+    def action_edit_zone(self) -> None:
         zone = self._current_zone()
         if not zone:
             self.notify("No zone selected", severity="warning")
             return
         self.push_screen(ZoneFormScreen("edit", zone), self._handle_zone_saved)
 
-    def action_delete_entry(self) -> None:
-        if self._focus_mode == "records":
-            self._delete_record()
-            return
+    def action_delete_zone(self) -> None:
         zone = self._current_zone()
         if not zone:
             self.notify("No zone selected", severity="warning")
@@ -445,6 +454,15 @@ class ZoneDashboard(App):
             self._handle_delete(zone, confirmed)
 
         self.push_screen(ConfirmDeleteScreen(zone.name), _on_confirm)
+
+    def action_add_record(self) -> None:
+        self._add_record()
+
+    def action_edit_record(self) -> None:
+        self._edit_record()
+
+    def action_delete_record(self) -> None:
+        self._delete_record()
 
     def refresh_zones(
         self, select_name: str | None = None, record_index: int | None = None
@@ -529,7 +547,7 @@ class ZoneDashboard(App):
         return "\n".join(lines)
 
     def _show_empty_details(self) -> None:
-        message = "No zones configured yet. Use `tuneup-alpha init` or press 'a' to add one."
+        message = "No zones configured yet. Use `tuneup-alpha init` or press 'z+a' to add one."
         if self._records_table:
             self._records_table.clear()
         if self._config_details:
