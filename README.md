@@ -125,16 +125,19 @@ tuneup-alpha tui
 Key bindings:
 
 Zone operations (prefix with `z`):
+
 - `z` then `a` - Add a new zone
 - `z` then `e` - Edit the selected zone
 - `z` then `d` - Delete the selected zone
 
 Record operations (prefix with `r`):
+
 - `r` then `a` - Add a new record
 - `r` then `e` - Edit the selected record
 - `r` then `d` - Delete the selected record
 
 Other controls:
+
 - `Tab` - Switch between zones and records view
 - `l` - Reload configuration from disk
 - `Esc` - Cancel current form/dialog
