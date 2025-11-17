@@ -597,6 +597,9 @@ class ZoneDashboard(App):
 
     CSS_PATH = "tui.tcss"
     BINDINGS = [
+        # Disable default tab/shift+tab pane switching (use z/r instead)
+        Binding("tab", "noop", show=False, priority=True),
+        Binding("shift+tab", "noop", show=False, priority=True),
         # Pane focus
         Binding("z", "focus_zones", "Focus zones"),
         Binding("r", "focus_records", "Focus records"),
@@ -640,6 +643,10 @@ class ZoneDashboard(App):
             self.theme = self._config.theme
         if self._table and self._table.row_count:
             self._table.focus()
+
+    def action_noop(self) -> None:
+        """No-op action to disable default tab/shift+tab bindings."""
+        pass
 
     def action_refresh(self) -> None:
         self.refresh_zones()
