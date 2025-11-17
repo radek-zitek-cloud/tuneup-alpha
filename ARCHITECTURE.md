@@ -20,33 +20,42 @@ src/tuneup_alpha/
 ## Component Responsibilities
 
 ### models.py
+
 Defines the core data structures using Pydantic:
+
 - `Record`: Represents a single DNS record (A or CNAME)
 - `Zone`: Represents a DNS zone with its records
 - `RecordChange`: Tracks modifications to records
 - `AppConfig`: Top-level configuration container
 
 Includes field validators for:
+
 - DNS label format validation
 - IPv4 address validation
 - Hostname validation
 
 ### config.py
+
 Handles configuration persistence:
+
 - `ConfigRepository`: Manages reading/writing YAML config files
 - `load_config()`: Helper to load configuration
 - `sample_config()`: Generates default configuration
 - Follows XDG Base Directory specification for config location
 
 ### nsupdate.py
+
 Generates and executes nsupdate scripts:
+
 - `NsupdatePlan`: Builds a sequence of DNS changes
 - `NsupdateClient`: Executes plans using the nsupdate command
 - Handles record creation, deletion, and updates
 - Renders changes into nsupdate script format
 
 ### dns_lookup.py
+
 DNS lookup utilities for auto-filling form fields:
+
 - `is_ipv4()`: Validates IPv4 address format
 - `reverse_dns_lookup()`: Performs reverse DNS lookup (IP → hostname)
 - `forward_dns_lookup()`: Performs forward DNS lookup (hostname → IP)
@@ -54,7 +63,9 @@ DNS lookup utilities for auto-filling form fields:
 - Gracefully handles lookup failures and network errors
 
 ### cli.py
+
 Typer-based command-line interface with commands:
+
 - `init`: Create initial configuration
 - `version`: Display version
 - `show`: Display configured zones in a table
@@ -63,7 +74,9 @@ Typer-based command-line interface with commands:
 - `tui`: Launch the interactive dashboard
 
 ### tui.py
+
 Textual-based interactive dashboard:
+
 - `ZoneDashboard`: Main application screen
 - `ZoneFormScreen`: Modal for adding/editing zones
 - `RecordFormScreen`: Modal for adding/editing records with DNS lookup integration
@@ -75,16 +88,19 @@ Textual-based interactive dashboard:
 ## Data Flow
 
 ### CLI Commands Flow
+
 ```
 User Command → CLI Parser → ConfigRepository → Models → Business Logic → Output
 ```
 
 ### TUI Flow
+
 ```
 User Input → TUI Event Handler → DNS Lookup (optional) → ConfigRepository → Models → Update UI
 ```
 
 ### Apply Flow
+
 ```
 Configuration → Models → NsupdatePlan → NsupdateClient → nsupdate → DNS Server
 ```
@@ -92,6 +108,7 @@ Configuration → Models → NsupdatePlan → NsupdateClient → nsupdate → DN
 ## Configuration Storage
 
 Configuration is stored as YAML following this structure:
+
 ```yaml
 zones:
   - name: example.com
@@ -109,6 +126,7 @@ zones:
 ## Validation Strategy
 
 Validation occurs at multiple levels:
+
 1. **Pydantic Models**: Validate data structure and basic types
 2. **Field Validators**: Custom validators for DNS-specific formats
 3. **Business Logic**: Additional validation in ConfigRepository methods
@@ -122,6 +140,7 @@ Validation occurs at multiple levels:
 ## Extension Points
 
 The architecture supports extension through:
+
 1. Adding new DNS record types to `RecordType` literal
 2. Adding new validators to the `Record` model
 3. Extending `ConfigRepository` with new operations
@@ -131,6 +150,7 @@ The architecture supports extension through:
 ## Testing Strategy
 
 Tests are organized by component:
+
 - `test_models.py`: Model validation and behavior
 - `test_config_repo.py`: Configuration persistence
 - `test_nsupdate.py`: Script generation
