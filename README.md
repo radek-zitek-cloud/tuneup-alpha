@@ -262,7 +262,77 @@ zones:
         type: A
         value: 198.51.100.20
         ttl: 300
+logging:
+  enabled: true
+  level: INFO
+  output: console
+  log_file: null
+  max_bytes: 10485760
+  backup_count: 5
+  structured: false
 ```
+
+### Logging Configuration
+
+TuneUp Alpha includes comprehensive structured logging support to track operations and changes:
+
+**Configuration Options**:
+
+- `enabled`: Enable or disable logging (default: `true`)
+- `level`: Log level - `DEBUG`, `INFO`, `WARNING`, or `ERROR` (default: `INFO`)
+- `output`: Where to send logs - `console`, `file`, or `both` (default: `console`)
+- `log_file`: Path to log file (required if output is `file` or `both`)
+- `max_bytes`: Maximum log file size before rotation in bytes (default: `10485760` - 10MB)
+- `backup_count`: Number of rotated log files to keep (default: `5`)
+- `structured`: Use structured JSON logging format (default: `false`)
+
+**Features**:
+
+- **Log Levels**: Control verbosity with DEBUG, INFO, WARNING, and ERROR levels
+- **Multiple Outputs**: Log to console, file, or both simultaneously
+- **Log Rotation**: Automatic rotation when log files reach the configured size
+- **Structured Logging**: Optional JSON output for easy parsing and analysis
+- **Correlation IDs**: Automatic tracking of related operations across the application
+- **Audit Trail**: Comprehensive logging of all DNS changes and operations
+
+**Example with File Logging**:
+
+```yaml
+logging:
+  enabled: true
+  level: DEBUG
+  output: both
+  log_file: /var/log/tuneup-alpha/app.log
+  max_bytes: 52428800  # 50MB
+  backup_count: 10
+  structured: true
+```
+
+**Structured Log Format**:
+
+When `structured: true`, logs are output as JSON lines:
+
+```json
+{
+  "timestamp": "2025-11-17T20:14:10.391434+00:00",
+  "level": "INFO",
+  "logger": "tuneup_alpha.cli",
+  "message": "Showing configured zones",
+  "module": "cli",
+  "function": "show",
+  "line": 90,
+  "correlation_id": "c16249aa-70b6-4d29-bff7-cdc7da93026b"
+}
+```
+
+**Audit Trail**:
+
+All DNS operations are logged with detailed metadata:
+
+- Zone creation, updates, and deletion
+- Record changes with full details
+- nsupdate execution status (dry-run vs. live)
+- Success/failure status of operations
 
 ### Record Types
 

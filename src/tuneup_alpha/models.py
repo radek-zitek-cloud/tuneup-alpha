@@ -112,6 +112,22 @@ class RecordChange(BaseModel):
     previous: Record | None = None
 
 
+class LoggingConfig(BaseModel):
+    """Logging configuration."""
+
+    enabled: bool = Field(default=True, description="Enable logging")
+    level: str = Field(default="INFO", description="Log level (DEBUG, INFO, WARNING, ERROR)")
+    output: str = Field(default="console", description="Log output (console, file, both)")
+    log_file: Path | None = Field(
+        default=None, description="Path to log file (required if output is file or both)"
+    )
+    max_bytes: int = Field(
+        default=10 * 1024 * 1024, description="Maximum log file size before rotation"
+    )
+    backup_count: int = Field(default=5, description="Number of backup log files to keep")
+    structured: bool = Field(default=False, description="Use structured JSON logging")
+
+
 class AppConfig(BaseModel):
     """Complete persisted configuration for TuneUp Alpha."""
 
@@ -119,4 +135,7 @@ class AppConfig(BaseModel):
     theme: str = Field(default="textual-dark", description="UI theme name")
     prefix_key_path: str = Field(
         default="~/.config/nsupdate", description="Default path prefix for nsupdate key files"
+    )
+    logging: LoggingConfig = Field(
+        default_factory=LoggingConfig, description="Logging configuration"
     )

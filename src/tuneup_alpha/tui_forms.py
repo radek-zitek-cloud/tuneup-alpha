@@ -512,9 +512,7 @@ class ConfirmDeleteScreen(ModalScreen[bool]):
 
     BINDINGS = [
         Binding("tab", "focus_next_button", "Next button", show=False, priority=True),
-        Binding(
-            "shift+tab", "focus_previous_button", "Previous button", show=False, priority=True
-        ),
+        Binding("shift+tab", "focus_previous_button", "Previous button", show=False, priority=True),
         Binding("escape", "cancel", "Cancel", show=False, priority=True),
     ]
 
@@ -561,9 +559,7 @@ class ConfirmRecordDeleteScreen(ModalScreen[bool]):
 
     BINDINGS = [
         Binding("tab", "focus_next_button", "Next button", show=False, priority=True),
-        Binding(
-            "shift+tab", "focus_previous_button", "Previous button", show=False, priority=True
-        ),
+        Binding("shift+tab", "focus_previous_button", "Previous button", show=False, priority=True),
         Binding("escape", "cancel", "Cancel", show=False, priority=True),
     ]
 
