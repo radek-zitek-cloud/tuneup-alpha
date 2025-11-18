@@ -11,7 +11,7 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Static
 
-from .dns_lookup import dns_lookup, dns_lookup_label, lookup_a_records, lookup_nameservers
+from .dns_lookup import dns_lookup, lookup_a_records, lookup_nameservers
 from .models import Record, RecordType, Zone
 
 ZoneFormResult = tuple[str | None, Zone]
@@ -310,6 +310,9 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         self._error: Static | None = None
         self._info: Static | None = None
         self._discovered_cname_target: str | None = None
+        # Track last lookup to avoid redundant lookups
+        self._last_lookup_label: str | None = None
+        self._last_lookup_type: str | None = None
 
     def compose(self) -> ComposeResult:
         title = (
@@ -389,9 +392,17 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         if event.input.id == "record-value":
             self._perform_dns_lookup(event.value)
         elif event.input.id == "record-label":
-            self._perform_label_lookup(event.value)
+            self._perform_label_type_lookup(event.value, None)
+        elif event.input.id == "record-type":
+            self._perform_label_type_lookup(None, event.value)
 
-    def _perform_label_lookup(self, label: str) -> None:
+    def _perform_label_type_lookup(self, label: str | None, record_type: str | None) -> None:
+        """Perform DNS lookup when label or type changes.
+
+        Args:
+            label: New label value if label changed, None if only type changed
+            record_type: New record type if type changed, None if only label changed
+        """
         if self._error:
             self._error.update("")
         if self._info:
@@ -399,34 +410,75 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
 
         self._discovered_cname_target = None
 
-        if not label or not label.strip():
+        # Get current values from form
+        label_input = self.query_one("#record-label", Input)
+        type_input = self.query_one("#record-type", Input)
+        value_input = self.query_one("#record-value", Input)
+
+        current_label = (label if label is not None else label_input.value).strip()
+        current_type = (
+            (record_type if record_type is not None else type_input.value).strip().upper()
+        )
+
+        if not current_label:
             return
 
+        # Check if we need to perform a new lookup
+        # Only lookup if the combination of label and type has changed
+        if self._last_lookup_label == current_label and self._last_lookup_type == current_type:
+            return
+
+        # Update tracking
+        self._last_lookup_label = current_label
+        self._last_lookup_type = current_type
+
         if self._info:
-            self._info.update("[yellow]⏳ Looking up label...[/yellow]")
+            self._info.update("[yellow]⏳ Looking up DNS record...[/yellow]")
 
-        label = label.strip()
+        # Import the new function
+        from .dns_lookup import dns_lookup_label_with_type
 
-        record_type, value = dns_lookup_label(label, self.zone_name)
+        # If we have a specific type, do a type-specific lookup
+        if current_type and current_type in ("A", "AAAA", "CNAME", "MX", "TXT", "SRV", "NS", "CAA"):
+            value = dns_lookup_label_with_type(current_label, self.zone_name, current_type)
 
-        if record_type and value:
-            type_input = self.query_one("#record-type", Input)
-            value_input = self.query_one("#record-value", Input)
+            if value:
+                # Update value field with found result
+                value_input.value = value
 
-            # Always update type and value fields when new DNS info is found
-            type_input.value = record_type
-            value_input.value = value
+                if current_type == "CNAME":
+                    self._discovered_cname_target = value
 
-            if record_type == "CNAME":
-                self._discovered_cname_target = value
-
-            if self._info:
-                self._info.update(
-                    f"[green]✓[/green] [cyan]Found {record_type} record: {value}[/cyan]"
-                )
+                if self._info:
+                    self._info.update(
+                        f"[green]✓[/green] [cyan]Found {current_type} record: {value}[/cyan]"
+                    )
+            else:
+                if self._info:
+                    self._info.update(
+                        f"[yellow]○[/yellow] [dim]No {current_type} record found for {current_label}[/dim]"
+                    )
         else:
-            if self._info:
-                self._info.update("[yellow]○[/yellow] [dim]No existing DNS records found[/dim]")
+            # Fall back to automatic type detection for unknown or empty types
+            from .dns_lookup import dns_lookup_label
+
+            detected_type, value = dns_lookup_label(current_label, self.zone_name)
+
+            if detected_type and value:
+                # Update both type and value fields
+                type_input.value = detected_type
+                value_input.value = value
+
+                if detected_type == "CNAME":
+                    self._discovered_cname_target = value
+
+                if self._info:
+                    self._info.update(
+                        f"[green]✓[/green] [cyan]Found {detected_type} record: {value}[/cyan]"
+                    )
+            else:
+                if self._info:
+                    self._info.update("[yellow]○[/yellow] [dim]No existing DNS records found[/dim]")
 
     def _perform_dns_lookup(self, value: str) -> None:
         if self._error:

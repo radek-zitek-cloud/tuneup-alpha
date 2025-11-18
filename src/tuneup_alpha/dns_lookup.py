@@ -260,6 +260,50 @@ def dns_lookup_label(
     return None, None
 
 
+def dns_lookup_label_with_type(label: str, zone_name: str, record_type: str) -> str | None:
+    """Lookup DNS information for a specific label and record type within a zone.
+
+    Args:
+        label: Record label (e.g., "www", "@")
+        zone_name: Zone name (e.g., "example.com")
+        record_type: DNS record type (e.g., "A", "CNAME", "MX", "TXT", "SRV", "NS", "CAA")
+
+    Returns:
+        The first value found for the record type, or None if not found
+    """
+    if not label or not zone_name or not record_type:
+        return None
+
+    # Construct FQDN from label and zone
+    fqdn = zone_name if label == "@" else f"{label}.{zone_name}"
+
+    # Normalize record type to uppercase
+    record_type = record_type.upper()
+
+    # Perform lookup based on record type
+    if record_type == "A":
+        records = lookup_a_records(fqdn)
+    elif record_type == "AAAA":
+        records = lookup_aaaa_records(fqdn)
+    elif record_type == "CNAME":
+        records = lookup_cname_records(fqdn)
+    elif record_type == "MX":
+        records = lookup_mx_records(fqdn)
+    elif record_type == "TXT":
+        records = lookup_txt_records(fqdn)
+    elif record_type == "SRV":
+        records = lookup_srv_records(fqdn)
+    elif record_type == "NS":
+        records = lookup_nameservers(fqdn)
+    elif record_type == "CAA":
+        records = lookup_caa_records(fqdn)
+    else:
+        logger.debug(f"Unsupported record type for lookup: {record_type}")
+        return None
+
+    return records[0] if records else None
+
+
 def dns_lookup(value: str) -> tuple[Literal["A", "AAAA", "CNAME"] | None, LookupResult]:
     """Perform DNS lookup and suggest record type and related information.
 

@@ -481,6 +481,7 @@ def test_record_form_label_lookup_updates_fields():
 
     type_input = MockInput("record-type")
     value_input = MockInput("record-value")
+    label_input = MockInput("record-label")
     info_static = type("MockStatic", (), {"update": lambda self, text: None})()
 
     def mock_query_one(selector, input_type=None):
@@ -488,6 +489,8 @@ def test_record_form_label_lookup_updates_fields():
             return type_input
         elif selector == "#record-value":
             return value_input
+        elif selector == "#record-label":
+            return label_input
         return None
 
     form.query_one = mock_query_one
@@ -495,11 +498,11 @@ def test_record_form_label_lookup_updates_fields():
     form._error = info_static
 
     # Mock dns_lookup_label to simulate finding an A record
-    with patch("tuneup_alpha.tui_forms.dns_lookup_label") as mock_lookup:
+    with patch("tuneup_alpha.dns_lookup.dns_lookup_label") as mock_lookup:
         mock_lookup.return_value = ("A", "192.0.2.1")
 
         # Simulate user entering a label
-        form._perform_label_lookup("www")
+        form._perform_label_type_lookup("www", None)
 
         # Assert that type and value were set
         assert type_input.value == "A"
@@ -508,11 +511,11 @@ def test_record_form_label_lookup_updates_fields():
 
 
 def test_record_form_label_lookup_overwrites_existing_values():
-    """Test that label lookup overwrites existing values when new DNS info is found.
+    """Test that label lookup performs type-specific lookup when type is already set.
 
-    This is the key fix: when user types 'name' and fields are prefilled,
-    then continues typing to 'name-wg', if new DNS info is found for 'name-wg',
-    it should overwrite the previously filled values.
+    When user types 'name' and type field already has "A",
+    then continues typing to 'name-wg', the lookup should search for an A record
+    for 'name-wg', not overwrite the type.
     """
     form = RecordFormScreen(mode="add", zone_name="example.com")
 
@@ -525,6 +528,7 @@ def test_record_form_label_lookup_overwrites_existing_values():
     # Fields already have values from previous lookup
     type_input = MockInput("record-type", "A")
     value_input = MockInput("record-value", "192.0.2.1")
+    label_input = MockInput("record-label")
     info_static = type("MockStatic", (), {"update": lambda self, text: None})()
 
     def mock_query_one(selector, input_type=None):
@@ -532,23 +536,25 @@ def test_record_form_label_lookup_overwrites_existing_values():
             return type_input
         elif selector == "#record-value":
             return value_input
+        elif selector == "#record-label":
+            return label_input
         return None
 
     form.query_one = mock_query_one
     form._info = info_static
     form._error = info_static
 
-    # Mock dns_lookup_label to simulate finding a CNAME record for new label
-    with patch("tuneup_alpha.tui_forms.dns_lookup_label") as mock_lookup:
-        mock_lookup.return_value = ("CNAME", "target.example.com")
+    # Mock dns_lookup_label_with_type to simulate finding an A record for new label
+    with patch("tuneup_alpha.dns_lookup.dns_lookup_label_with_type") as mock_lookup:
+        mock_lookup.return_value = "203.0.2.100"
 
         # Simulate user continuing to type (label changed from 'name' to 'name-wg')
-        form._perform_label_lookup("name-wg")
+        form._perform_label_type_lookup("name-wg", None)
 
-        # Assert that type and value were OVERWRITTEN with new DNS info
-        assert type_input.value == "CNAME"
-        assert value_input.value == "target.example.com"
-        mock_lookup.assert_called_once_with("name-wg", "example.com")
+        # Assert that value was updated but type stayed the same (type-specific lookup)
+        assert type_input.value == "A"  # Type should NOT change
+        assert value_input.value == "203.0.2.100"  # Value should update with new A record
+        mock_lookup.assert_called_once_with("name-wg", "example.com", "A")
 
 
 def test_record_form_label_lookup_cname_discovered():
@@ -563,6 +569,7 @@ def test_record_form_label_lookup_cname_discovered():
 
     type_input = MockInput("record-type")
     value_input = MockInput("record-value")
+    label_input = MockInput("record-label")
     info_static = type("MockStatic", (), {"update": lambda self, text: None})()
 
     def mock_query_one(selector, input_type=None):
@@ -570,6 +577,8 @@ def test_record_form_label_lookup_cname_discovered():
             return type_input
         elif selector == "#record-value":
             return value_input
+        elif selector == "#record-label":
+            return label_input
         return None
 
     form.query_one = mock_query_one
@@ -577,11 +586,11 @@ def test_record_form_label_lookup_cname_discovered():
     form._error = info_static
 
     # Mock dns_lookup_label to simulate finding a CNAME record
-    with patch("tuneup_alpha.tui_forms.dns_lookup_label") as mock_lookup:
+    with patch("tuneup_alpha.dns_lookup.dns_lookup_label") as mock_lookup:
         mock_lookup.return_value = ("CNAME", "cdn.example.com")
 
         # Simulate user entering a label
-        form._perform_label_lookup("www")
+        form._perform_label_type_lookup("www", None)
 
         # Assert that discovered_cname_target was set
         assert form._discovered_cname_target == "cdn.example.com"
@@ -591,10 +600,31 @@ def test_record_form_label_lookup_empty_label():
     """Test that empty label doesn't trigger DNS lookup."""
     form = RecordFormScreen(mode="add", zone_name="example.com")
 
+    # Mock query_one to return mock inputs
+    class MockInput:
+        def __init__(self, input_id):
+            self.id = input_id
+            self.value = ""
+
+    label_input = MockInput("record-label")
+    type_input = MockInput("record-type")
+    value_input = MockInput("record-value")
+
+    def mock_query_one(selector, input_type=None):
+        if selector == "#record-label":
+            return label_input
+        elif selector == "#record-type":
+            return type_input
+        elif selector == "#record-value":
+            return value_input
+        return None
+
+    form.query_one = mock_query_one
+
     # Mock dns_lookup_label
-    with patch("tuneup_alpha.tui_forms.dns_lookup_label") as mock_lookup:
+    with patch("tuneup_alpha.dns_lookup.dns_lookup_label") as mock_lookup:
         # Simulate user entering empty label
-        form._perform_label_lookup("")
+        form._perform_label_type_lookup("", None)
 
         # Assert that dns_lookup_label was not called
         mock_lookup.assert_not_called()
@@ -617,12 +647,15 @@ def test_record_form_label_lookup_no_dns_record_found():
         def update(self, text):
             self.renderable = text
 
+    label_input = MockInput("record-label")
     type_input = MockInput("record-type")
     value_input = MockInput("record-value")
     info_static = MockStatic()
 
     def mock_query_one(selector, input_type=None):
-        if selector == "#record-type":
+        if selector == "#record-label":
+            return label_input
+        elif selector == "#record-type":
             return type_input
         elif selector == "#record-value":
             return value_input
@@ -636,14 +669,100 @@ def test_record_form_label_lookup_no_dns_record_found():
     form._discovered_cname_target = "old.example.com"
 
     # Mock dns_lookup_label to simulate no record found
-    with patch("tuneup_alpha.tui_forms.dns_lookup_label") as mock_lookup:
+    with patch("tuneup_alpha.dns_lookup.dns_lookup_label") as mock_lookup:
         mock_lookup.return_value = (None, None)
 
         # Simulate user entering a label
-        form._perform_label_lookup("newlabel")
+        form._perform_label_type_lookup("newlabel", None)
 
         # Assert that discovered_cname_target was cleared
         assert form._discovered_cname_target is None
         # Assert that appropriate message is shown
         assert "No existing DNS records found" in info_static.renderable
         assert "○" in info_static.renderable
+
+
+def test_record_form_type_change_triggers_lookup():
+    """Test that changing the type field triggers a type-specific lookup."""
+    form = RecordFormScreen(mode="add", zone_name="example.com")
+
+    # Mock query_one to return mock inputs
+    class MockInput:
+        def __init__(self, input_id, initial_value=""):
+            self.id = input_id
+            self.value = initial_value
+
+    label_input = MockInput("record-label", "www")
+    type_input = MockInput("record-type", "A")
+    value_input = MockInput("record-value", "192.0.2.1")
+    info_static = type("MockStatic", (), {"update": lambda self, text: None})()
+
+    def mock_query_one(selector, input_type=None):
+        if selector == "#record-label":
+            return label_input
+        elif selector == "#record-type":
+            return type_input
+        elif selector == "#record-value":
+            return value_input
+        return None
+
+    form.query_one = mock_query_one
+    form._info = info_static
+    form._error = info_static
+
+    # Simulate a first lookup for label "www" and type "A"
+    form._last_lookup_label = "www"
+    form._last_lookup_type = "A"
+
+    # Mock dns_lookup_label_with_type to simulate finding an AAAA record
+    with patch("tuneup_alpha.dns_lookup.dns_lookup_label_with_type") as mock_lookup:
+        mock_lookup.return_value = "2001:db8::1"
+
+        # Simulate user changing type from "A" to "AAAA"
+        form._perform_label_type_lookup(None, "AAAA")
+
+        # Assert that type-specific lookup was called with new type
+        mock_lookup.assert_called_once_with("www", "example.com", "AAAA")
+        # Assert that value was updated
+        assert value_input.value == "2001:db8::1"
+
+
+def test_record_form_label_and_type_change_together():
+    """Test that both label and type changing triggers a new lookup."""
+    form = RecordFormScreen(mode="add", zone_name="example.com")
+
+    # Mock query_one to return mock inputs
+    class MockInput:
+        def __init__(self, input_id, initial_value=""):
+            self.id = input_id
+            self.value = initial_value
+
+    label_input = MockInput("record-label", "mail")
+    type_input = MockInput("record-type", "MX")
+    value_input = MockInput("record-value", "")
+    info_static = type("MockStatic", (), {"update": lambda self, text: None})()
+
+    def mock_query_one(selector, input_type=None):
+        if selector == "#record-label":
+            return label_input
+        elif selector == "#record-type":
+            return type_input
+        elif selector == "#record-value":
+            return value_input
+        return None
+
+    form.query_one = mock_query_one
+    form._info = info_static
+    form._error = info_static
+
+    # Mock dns_lookup_label_with_type to simulate finding an MX record
+    with patch("tuneup_alpha.dns_lookup.dns_lookup_label_with_type") as mock_lookup:
+        mock_lookup.return_value = "10 mail.example.com"
+
+        # Simulate user entering label and type
+        form._perform_label_type_lookup("mail", "MX")
+
+        # Assert that type-specific lookup was called
+        mock_lookup.assert_called_once_with("mail", "example.com", "MX")
+        # Assert that value was updated
+        assert value_input.value == "10 mail.example.com"
