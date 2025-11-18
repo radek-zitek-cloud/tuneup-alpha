@@ -194,8 +194,12 @@ def test_record_form_dns_lookup_empty_value():
         mock_dns.assert_not_called()
 
 
-def test_record_form_dns_lookup_preserves_existing_type():
-    """Test that DNS lookup doesn't override manually set type."""
+def test_record_form_dns_lookup_updates_type_field():
+    """Test that DNS lookup updates type field when DNS info is found.
+
+    This ensures consistent behavior with label lookup - both always update
+    fields when new DNS information is discovered.
+    """
     form = RecordFormScreen(mode="add", zone_name="example.com")
 
     # Mock query_one to return mock inputs
@@ -223,8 +227,8 @@ def test_record_form_dns_lookup_preserves_existing_type():
         # Simulate user entering an IP address
         form._perform_dns_lookup("192.0.2.1")
 
-        # Assert that type was NOT changed because it was already set to CNAME
-        assert type_input.value == "CNAME"
+        # Assert that type WAS changed to match the DNS lookup result
+        assert type_input.value == "A"
 
 
 def test_dns_visual_cue_successful_reverse_lookup():
