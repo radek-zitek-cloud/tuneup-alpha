@@ -413,11 +413,9 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
             type_input = self.query_one("#record-type", Input)
             value_input = self.query_one("#record-value", Input)
 
-            if not type_input.value.strip() or type_input.value.strip().upper() in ("A", ""):
-                type_input.value = record_type
-
-            if not value_input.value.strip():
-                value_input.value = value
+            # Always update type and value fields when new DNS info is found
+            type_input.value = record_type
+            value_input.value = value
 
             if record_type == "CNAME":
                 self._discovered_cname_target = value
