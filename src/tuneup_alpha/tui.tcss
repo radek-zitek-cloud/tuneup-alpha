@@ -15,20 +15,28 @@ Footer {
 }
 
 #zones-table {
-    height: 6;
+    height: 7;
+    border: solid $panel;
+}
+
+#zones-table.focused {
     border: solid $primary;
 }
 
 #records-table {
     height: 30%;
-    border: solid $secondary;
+    border: solid $panel;
+}
+
+#records-table.focused {
+    border: solid $primary;
 }
 
 #zone-configuration {
     height: auto;
     padding: 1 2;
     background: $panel;
-    border: solid $accent;
+    border: solid $panel;
 }
 
 /* Modal dialogs */
