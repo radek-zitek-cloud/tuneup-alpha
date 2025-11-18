@@ -175,9 +175,33 @@ def sample_config() -> AppConfig:
                 default_ttl=3600,
                 notes="Sandbox zone used for demonstrating TuneUp Alpha.",
                 records=[
-                    Record(label="@", type="A", value="198.51.100.10", ttl=600),
-                    Record(label="www", type="CNAME", value="@", ttl=300),
-                    Record(label="mail", type="A", value="198.51.100.20", ttl=300),
+                    Record(
+                        label="@",
+                        type="A",
+                        value="198.51.100.10",
+                        ttl=600,
+                        priority=None,
+                        weight=None,
+                        port=None,
+                    ),
+                    Record(
+                        label="www",
+                        type="CNAME",
+                        value="@",
+                        ttl=300,
+                        priority=None,
+                        weight=None,
+                        port=None,
+                    ),
+                    Record(
+                        label="mail",
+                        type="A",
+                        value="198.51.100.20",
+                        ttl=300,
+                        priority=None,
+                        weight=None,
+                        port=None,
+                    ),
                 ],
             )
         ]

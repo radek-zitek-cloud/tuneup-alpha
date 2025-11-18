@@ -380,6 +380,9 @@ class ZoneDashboard(App):
                         type="A",
                         value=a_records[0],
                         ttl=record.ttl,
+                        priority=None,
+                        weight=None,
+                        port=None,
                     )
                     records.append(target_record)
                     self.notify(

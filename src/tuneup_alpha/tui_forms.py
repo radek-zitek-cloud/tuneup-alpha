@@ -234,6 +234,9 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
                     type="A",
                     value=self._discovered_a_records[0],
                     ttl=default_ttl,
+                    priority=None,
+                    weight=None,
+                    port=None,
                 )
                 existing_records = [apex_record] + existing_records
 
