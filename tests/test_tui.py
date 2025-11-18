@@ -467,9 +467,6 @@ def test_zone_form_key_path_fallback_in_build():
             self.id = input_id
             self.value = value
 
-        def strip(self):
-            return self.value.strip()
-
     # Setup inputs with zone name and server, but empty key path
     zone_name_input = MockInput("zone-name", "example.com")
     server_input = MockInput("zone-server", "ns1.example.com")
