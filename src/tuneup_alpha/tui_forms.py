@@ -118,15 +118,22 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
             self._error.update("")
 
         if event.input.id == "zone-name":
-            self._perform_zone_lookup(event.value)
+            self._perform_zone_lookup(event.value, generate_key_path=False)
 
     def on_input_blurred(self, event: Input.Blurred) -> None:
         """Handle input blur to perform DNS lookup on zone name field."""
         if event.input.id == "zone-name":
-            self._perform_zone_lookup(event.input.value)
+            self._perform_zone_lookup(event.input.value, generate_key_path=True)
 
-    def _perform_zone_lookup(self, domain: str) -> None:
-        """Perform DNS lookup for zone and update fields with discovered values."""
+    def _perform_zone_lookup(self, domain: str, *, generate_key_path: bool = True) -> None:
+        """Perform DNS lookup for zone and update fields with discovered values.
+
+        Args:
+            domain: The domain name to lookup
+            generate_key_path: Whether to generate the default key file path.
+                Should be True when called from blur handler, False when called
+                from change handler to avoid updating the path on every keystroke.
+        """
         if self._error:
             self._error.update("")
         if self._info:
@@ -155,7 +162,7 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
         if nameservers and not server_input.value.strip():
             server_input.value = nameservers[0]
 
-        if self.mode == "add":
+        if self.mode == "add" and generate_key_path:
             key_input = self.query_one("#zone-key", Input)
             if not key_input.value.strip():
                 key_input.value = f"{self._prefix_key_path}/{domain}.key"

@@ -366,7 +366,7 @@ def test_dns_visual_cue_checking_indicator():
 
 
 def test_zone_form_dynamic_lookup_on_input_change():
-    """Test that zone name input change triggers dynamic DNS lookup."""
+    """Test that zone name input change triggers DNS lookup but NOT key file generation."""
     form = ZoneFormScreen(mode="add", zone=None)
 
     # Mock query_one to return mock inputs
@@ -398,8 +398,8 @@ def test_zone_form_dynamic_lookup_on_input_change():
         mock_ns.return_value = ["ns1.example.com", "ns2.example.com"]
         mock_a.return_value = ["192.0.2.1"]
 
-        # Simulate user typing a zone name
-        form._perform_zone_lookup("example.com")
+        # Simulate user typing a zone name (without generating key path)
+        form._perform_zone_lookup("example.com", generate_key_path=False)
 
         # Assert that nameserver lookup was called
         mock_ns.assert_called_once_with("example.com")
@@ -407,7 +407,53 @@ def test_zone_form_dynamic_lookup_on_input_change():
         mock_a.assert_called_once_with("example.com")
         # Assert that server field was populated
         assert server_input.value == "ns1.example.com"
-        # Assert that key field was populated
+        # Assert that key field was NOT populated (stays empty)
+        assert key_input.value == ""
+
+
+def test_zone_form_key_path_generated_on_blur():
+    """Test that key file path is generated when zone name field loses focus."""
+    form = ZoneFormScreen(mode="add", zone=None)
+
+    # Mock query_one to return mock inputs
+    class MockInput:
+        def __init__(self, input_id):
+            self.id = input_id
+            self.value = ""
+
+    server_input = MockInput("zone-server")
+    key_input = MockInput("zone-key")
+    info_static = type("MockStatic", (), {"update": lambda self, text: None})()
+
+    def mock_query_one(selector, input_type=None):
+        if selector == "#zone-server":
+            return server_input
+        elif selector == "#zone-key":
+            return key_input
+        return None
+
+    form.query_one = mock_query_one
+    form._info = info_static
+    form._error = info_static
+
+    # Mock the DNS lookup functions
+    with (
+        patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns,
+        patch("tuneup_alpha.tui_forms.lookup_a_records") as mock_a,
+    ):
+        mock_ns.return_value = ["ns1.example.com", "ns2.example.com"]
+        mock_a.return_value = ["192.0.2.1"]
+
+        # Simulate zone name field losing focus (with key path generation)
+        form._perform_zone_lookup("example.com", generate_key_path=True)
+
+        # Assert that nameserver lookup was called
+        mock_ns.assert_called_once_with("example.com")
+        # Assert that A record lookup was called
+        mock_a.assert_called_once_with("example.com")
+        # Assert that server field was populated
+        assert server_input.value == "ns1.example.com"
+        # Assert that key field WAS populated
         assert key_input.value == "~/.config/nsupdate/example.com.key"
 
 
