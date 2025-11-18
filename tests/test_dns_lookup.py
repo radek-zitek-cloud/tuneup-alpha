@@ -363,3 +363,106 @@ def test_dns_lookup_label_with_aaaa_record():
         record_type, value = dns_lookup_label("www", "example.com")
         assert record_type == "AAAA"
         assert value == "2001:db8::1"
+
+
+def test_dns_lookup_label_with_type_a():
+    """Test dns_lookup_label_with_type with A record."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    with patch("tuneup_alpha.dns_lookup.lookup_a_records") as mock_a:
+        mock_a.return_value = ["192.0.2.1", "192.0.2.2"]
+        value = dns_lookup_label_with_type("www", "example.com", "A")
+        assert value == "192.0.2.1"
+        mock_a.assert_called_once_with("www.example.com")
+
+
+def test_dns_lookup_label_with_type_mx():
+    """Test dns_lookup_label_with_type with MX record."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    with patch("tuneup_alpha.dns_lookup.lookup_mx_records") as mock_mx:
+        mock_mx.return_value = ["10 mail.example.com", "20 mail2.example.com"]
+        value = dns_lookup_label_with_type("@", "example.com", "MX")
+        assert value == "10 mail.example.com"
+        mock_mx.assert_called_once_with("example.com")
+
+
+def test_dns_lookup_label_with_type_txt():
+    """Test dns_lookup_label_with_type with TXT record."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    with patch("tuneup_alpha.dns_lookup.lookup_txt_records") as mock_txt:
+        mock_txt.return_value = ["v=spf1 include:_spf.example.com ~all"]
+        value = dns_lookup_label_with_type("@", "example.com", "TXT")
+        assert value == "v=spf1 include:_spf.example.com ~all"
+        mock_txt.assert_called_once_with("example.com")
+
+
+def test_dns_lookup_label_with_type_srv():
+    """Test dns_lookup_label_with_type with SRV record."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    with patch("tuneup_alpha.dns_lookup.lookup_srv_records") as mock_srv:
+        mock_srv.return_value = ["10 60 80 server.example.com"]
+        value = dns_lookup_label_with_type("_http._tcp", "example.com", "SRV")
+        assert value == "10 60 80 server.example.com"
+        mock_srv.assert_called_once_with("_http._tcp.example.com")
+
+
+def test_dns_lookup_label_with_type_ns():
+    """Test dns_lookup_label_with_type with NS record."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    with patch("tuneup_alpha.dns_lookup.lookup_nameservers") as mock_ns:
+        mock_ns.return_value = ["ns1.example.com", "ns2.example.com"]
+        value = dns_lookup_label_with_type("subdomain", "example.com", "NS")
+        assert value == "ns1.example.com"
+        mock_ns.assert_called_once_with("subdomain.example.com")
+
+
+def test_dns_lookup_label_with_type_caa():
+    """Test dns_lookup_label_with_type with CAA record."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    with patch("tuneup_alpha.dns_lookup.lookup_caa_records") as mock_caa:
+        mock_caa.return_value = ["0 issue letsencrypt.org"]
+        value = dns_lookup_label_with_type("@", "example.com", "CAA")
+        assert value == "0 issue letsencrypt.org"
+        mock_caa.assert_called_once_with("example.com")
+
+
+def test_dns_lookup_label_with_type_not_found():
+    """Test dns_lookup_label_with_type when no records are found."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    with patch("tuneup_alpha.dns_lookup.lookup_a_records") as mock_a:
+        mock_a.return_value = []
+        value = dns_lookup_label_with_type("www", "example.com", "A")
+        assert value is None
+
+
+def test_dns_lookup_label_with_type_empty_inputs():
+    """Test dns_lookup_label_with_type with empty inputs."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    assert dns_lookup_label_with_type("", "example.com", "A") is None
+    assert dns_lookup_label_with_type("www", "", "A") is None
+    assert dns_lookup_label_with_type("www", "example.com", "") is None
+
+
+def test_dns_lookup_label_with_type_case_insensitive():
+    """Test dns_lookup_label_with_type handles lowercase type."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    with patch("tuneup_alpha.dns_lookup.lookup_a_records") as mock_a:
+        mock_a.return_value = ["192.0.2.1"]
+        value = dns_lookup_label_with_type("www", "example.com", "a")
+        assert value == "192.0.2.1"
+
+
+def test_dns_lookup_label_with_type_unsupported_type():
+    """Test dns_lookup_label_with_type with unsupported record type."""
+    from tuneup_alpha.dns_lookup import dns_lookup_label_with_type
+
+    value = dns_lookup_label_with_type("www", "example.com", "UNSUPPORTED")
+    assert value is None
