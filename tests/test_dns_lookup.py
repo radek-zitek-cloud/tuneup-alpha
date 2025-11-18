@@ -256,9 +256,11 @@ def test_dns_lookup_label_not_found():
     with (
         patch("tuneup_alpha.dns_lookup.lookup_cname_records") as mock_cname,
         patch("tuneup_alpha.dns_lookup.lookup_a_records") as mock_a,
+        patch("tuneup_alpha.dns_lookup.lookup_aaaa_records") as mock_aaaa,
     ):
         mock_cname.return_value = []
         mock_a.return_value = []
+        mock_aaaa.return_value = []
         record_type, value = dns_lookup_label("www", "example.com")
         assert record_type is None
         assert value is None
