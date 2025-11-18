@@ -474,6 +474,86 @@ def test_zone_form_dynamic_lookup_empty_value():
         mock_a.assert_not_called()
 
 
+def test_zone_form_key_path_not_generated_during_typing():
+    """Integration test: key path should not be generated while user is typing.
+
+    This test simulates the actual flow:
+    1. User types incrementally in the zone name field (e.g., "e", "ex", "exa", etc.)
+    2. Each keystroke triggers on_input_changed
+    3. The key file path should remain empty during typing
+    4. Only when the field loses focus should the key path be generated
+    """
+    form = ZoneFormScreen(mode="add", zone=None)
+
+    # Mock query_one to return mock inputs
+    class MockInput:
+        def __init__(self, input_id):
+            self.id = input_id
+            self.value = ""
+
+    zone_name_input = MockInput("zone-name")
+    server_input = MockInput("zone-server")
+    key_input = MockInput("zone-key")
+    info_static = type("MockStatic", (), {"update": lambda self, text: None})()
+
+    def mock_query_one(selector, input_type=None):
+        if selector == "#zone-name":
+            return zone_name_input
+        elif selector == "#zone-server":
+            return server_input
+        elif selector == "#zone-key":
+            return key_input
+        return None
+
+    form.query_one = mock_query_one
+    form._info = info_static
+    form._error = info_static
+
+    # Mock the DNS lookup functions
+    with (
+        patch("tuneup_alpha.tui_forms.lookup_nameservers") as mock_ns,
+        patch("tuneup_alpha.tui_forms.lookup_a_records") as mock_a,
+    ):
+        mock_ns.return_value = ["ns1.example.com"]
+        mock_a.return_value = ["192.0.2.1"]
+
+        # Simulate user typing incrementally
+        for partial_domain in ["e", "ex", "exa", "exam", "examp", "exampl", "example"]:
+            zone_name_input.value = partial_domain
+
+            # Create a mock event with the current value
+            class MockEvent:
+                def __init__(self, val):
+                    self.input = zone_name_input
+                    self.value = val
+
+            event = MockEvent(partial_domain)
+
+            # Simulate on_input_changed being called
+            form.on_input_changed(event)
+
+            # Key path should still be empty during typing
+            assert key_input.value == "", (
+                f"Key path should be empty while typing '{partial_domain}', "
+                f"but got '{key_input.value}'"
+            )
+
+        # Now simulate the zone name field losing focus
+        zone_name_input.value = "example.com"
+
+        class MockBlurEvent:
+            def __init__(self):
+                self.input = zone_name_input
+
+        blur_event = MockBlurEvent()
+        form.on_input_blurred(blur_event)
+
+        # After blur, the key path should be generated
+        assert key_input.value == "~/.config/nsupdate/example.com.key", (
+            f"Key path should be generated on blur, but got '{key_input.value}'"
+        )
+
+
 def test_zone_form_dynamic_lookup_preserves_existing_server():
     """Test that DNS lookup doesn't override manually entered server."""
     form = ZoneFormScreen(mode="add", zone=None)
