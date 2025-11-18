@@ -35,6 +35,7 @@ class ZoneDashboard(App):
     """Simple Textual dashboard listing all configured zones."""
 
     CSS_PATH = "tui.tcss"
+    TITLE = "DNS Zone Dashboard"
     BINDINGS = [
         # Disable default tab/shift+tab pane switching in main app (use z/r instead)
         # Note: Modal screens will override these with their own tab bindings
@@ -82,6 +83,7 @@ class ZoneDashboard(App):
             self.theme = self._config.theme
         if self._table and self._table.row_count:
             self._table.focus()
+        self._update_focus_state()
 
     def action_noop(self) -> None:
         """No-op action to disable default tab/shift+tab bindings."""
@@ -111,6 +113,7 @@ class ZoneDashboard(App):
         if self._table:
             self._focus_mode = "zones"
             self._table.focus()
+            self._update_focus_state()
 
     def action_focus_records(self) -> None:
         """Focus the records pane."""
@@ -119,6 +122,27 @@ class ZoneDashboard(App):
             return
         self._focus_mode = "records"
         self._records_table.focus()
+        self._update_focus_state()
+
+    def _update_focus_state(self) -> None:
+        """Update border colors and title based on which pane has focus."""
+        if not self._table or not self._records_table:
+            return
+
+        # Update CSS classes for border colors
+        if self._focus_mode == "zones":
+            self._table.add_class("focused")
+            self._records_table.remove_class("focused")
+            self.title = "DNS Zone Dashboard"
+        else:  # records
+            self._table.remove_class("focused")
+            self._records_table.add_class("focused")
+            # Update title with zone name
+            zone = self._current_zone()
+            if zone:
+                self.title = f"DNS Zone Dashboard [{zone.name}]"
+            else:
+                self.title = "DNS Zone Dashboard"
 
     def action_add(self) -> None:
         """Add a zone or record based on which pane has focus."""
@@ -400,6 +424,7 @@ class ZoneDashboard(App):
         self.refresh_zones(select_name=updated.name, record_index=target_index)
         if self._focus_mode == "records" and self._records_table:
             self._records_table.focus()
+            self._update_focus_state()
 
     def _handle_record_delete(self, zone_name: str, record_index: int, confirmed: bool) -> None:
         if not confirmed:
@@ -428,6 +453,7 @@ class ZoneDashboard(App):
         self.refresh_zones(select_name=updated.name, record_index=target_index)
         if self._focus_mode == "records" and self._records_table:
             self._records_table.focus()
+            self._update_focus_state()
 
     def _get_zone_by_name(self, name: str) -> Zone | None:
         for zone in self.config_repo.load().zones:
