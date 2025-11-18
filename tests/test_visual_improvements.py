@@ -38,8 +38,9 @@ def test_focused_panel_has_distinct_border_color() -> None:
     css_path = Path(__file__).parent.parent / "src" / "tuneup_alpha" / "tui.tcss"
     css_content = css_path.read_text()
 
-    # Focused panel selectors should use $primary border
-    assert "#zones-table.focused {" in css_content or "#records-table.focused {" in css_content
+    # Both zones and records tables should have focused state with $primary border
+    assert "#zones-table.focused {" in css_content
+    assert "#records-table.focused {" in css_content
     assert "border: solid $primary;" in css_content
 
 
