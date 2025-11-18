@@ -457,6 +457,49 @@ def test_zone_form_key_path_generated_on_blur():
         assert key_input.value == "~/.config/nsupdate/example.com.key"
 
 
+def test_zone_form_key_path_fallback_in_build():
+    """Test that key file path is generated as fallback in _build_zone if not set."""
+    form = ZoneFormScreen(mode="add", zone=None)
+
+    # Mock query_one to return mock inputs
+    class MockInput:
+        def __init__(self, input_id, value=""):
+            self.id = input_id
+            self.value = value
+
+    # Setup inputs with zone name and server, but empty key path
+    zone_name_input = MockInput("zone-name", "example.com")
+    server_input = MockInput("zone-server", "ns1.example.com")
+    key_input = MockInput("zone-key", "")  # Empty key path
+    ttl_input = MockInput("zone-ttl", "3600")
+    notes_input = MockInput("zone-notes", "Test notes")
+
+    def mock_query_one(selector, input_type=None):
+        if selector == "#zone-name":
+            return zone_name_input
+        elif selector == "#zone-server":
+            return server_input
+        elif selector == "#zone-key":
+            return key_input
+        elif selector == "#zone-ttl":
+            return ttl_input
+        elif selector == "#zone-notes":
+            return notes_input
+        return None
+
+    form.query_one = mock_query_one
+
+    # Build the zone - this should generate the default key path as a fallback
+    zone = form._build_zone()
+
+    # Assert that the zone was built successfully with a generated key path
+    assert zone.name == "example.com"
+    assert zone.server == "ns1.example.com"
+    assert str(zone.key_file) == "~/.config/nsupdate/example.com.key"
+    assert zone.default_ttl == 3600
+    assert zone.notes == "Test notes"
+
+
 def test_zone_form_dynamic_lookup_empty_value():
     """Test that empty zone name doesn't trigger DNS lookup."""
     form = ZoneFormScreen(mode="add", zone=None)

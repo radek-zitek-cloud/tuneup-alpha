@@ -226,6 +226,11 @@ class ZoneFormScreen(ModalScreen[ZoneFormResult | None]):
             raise ValueError("Zone name is required.")
         if not server:
             raise ValueError("Authoritative server is required.")
+
+        # Generate default key file path if not provided (fallback for add mode)
+        if not key and self.mode == "add":
+            key = f"{self._prefix_key_path}/{name}.key"
+
         if not key:
             raise ValueError("Key file path is required.")
 
