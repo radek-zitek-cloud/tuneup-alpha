@@ -11,7 +11,13 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Static
 
-from .dns_lookup import dns_lookup, lookup_a_records, lookup_nameservers
+from .dns_lookup import (
+    dns_lookup,
+    dns_lookup_label,
+    dns_lookup_label_with_type,
+    lookup_a_records,
+    lookup_nameservers,
+)
 from .models import Record, RecordType, Zone
 
 ZoneFormResult = tuple[str | None, Zone]
@@ -408,8 +414,6 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         if self._info:
             self._info.update("")
 
-        self._discovered_cname_target = None
-
         # Get current values from form
         label_input = self.query_one("#record-label", Input)
         type_input = self.query_one("#record-type", Input)
@@ -428,15 +432,18 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
         if self._last_lookup_label == current_label and self._last_lookup_type == current_type:
             return
 
-        # Update tracking
+        # Clear discovered CNAME target when performing a new lookup
+        self._discovered_cname_target = None
+
+        # Update tracking to prevent redundant lookups.
+        # Note: Tracking is updated before lookup execution to avoid repeated
+        # attempts for the same label/type combination, even if the lookup fails.
+        # This prevents excessive DNS queries when records don't exist.
         self._last_lookup_label = current_label
         self._last_lookup_type = current_type
 
         if self._info:
             self._info.update("[yellow]⏳ Looking up DNS record...[/yellow]")
-
-        # Import the new function
-        from .dns_lookup import dns_lookup_label_with_type
 
         # If we have a specific type, do a type-specific lookup
         if current_type and current_type in ("A", "AAAA", "CNAME", "MX", "TXT", "SRV", "NS", "CAA"):
@@ -460,8 +467,6 @@ class RecordFormScreen(ModalScreen[RecordFormResult | None]):
                     )
         else:
             # Fall back to automatic type detection for unknown or empty types
-            from .dns_lookup import dns_lookup_label
-
             detected_type, value = dns_lookup_label(current_label, self.zone_name)
 
             if detected_type and value:

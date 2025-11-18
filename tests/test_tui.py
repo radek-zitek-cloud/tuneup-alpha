@@ -498,7 +498,7 @@ def test_record_form_label_lookup_updates_fields():
     form._error = info_static
 
     # Mock dns_lookup_label to simulate finding an A record
-    with patch("tuneup_alpha.dns_lookup.dns_lookup_label") as mock_lookup:
+    with patch("tuneup_alpha.tui_forms.dns_lookup_label") as mock_lookup:
         mock_lookup.return_value = ("A", "192.0.2.1")
 
         # Simulate user entering a label
@@ -545,7 +545,7 @@ def test_record_form_label_lookup_overwrites_existing_values():
     form._error = info_static
 
     # Mock dns_lookup_label_with_type to simulate finding an A record for new label
-    with patch("tuneup_alpha.dns_lookup.dns_lookup_label_with_type") as mock_lookup:
+    with patch("tuneup_alpha.tui_forms.dns_lookup_label_with_type") as mock_lookup:
         mock_lookup.return_value = "203.0.2.100"
 
         # Simulate user continuing to type (label changed from 'name' to 'name-wg')
@@ -586,7 +586,7 @@ def test_record_form_label_lookup_cname_discovered():
     form._error = info_static
 
     # Mock dns_lookup_label to simulate finding a CNAME record
-    with patch("tuneup_alpha.dns_lookup.dns_lookup_label") as mock_lookup:
+    with patch("tuneup_alpha.tui_forms.dns_lookup_label") as mock_lookup:
         mock_lookup.return_value = ("CNAME", "cdn.example.com")
 
         # Simulate user entering a label
@@ -622,7 +622,7 @@ def test_record_form_label_lookup_empty_label():
     form.query_one = mock_query_one
 
     # Mock dns_lookup_label
-    with patch("tuneup_alpha.dns_lookup.dns_lookup_label") as mock_lookup:
+    with patch("tuneup_alpha.tui_forms.dns_lookup_label") as mock_lookup:
         # Simulate user entering empty label
         form._perform_label_type_lookup("", None)
 
@@ -669,7 +669,7 @@ def test_record_form_label_lookup_no_dns_record_found():
     form._discovered_cname_target = "old.example.com"
 
     # Mock dns_lookup_label to simulate no record found
-    with patch("tuneup_alpha.dns_lookup.dns_lookup_label") as mock_lookup:
+    with patch("tuneup_alpha.tui_forms.dns_lookup_label") as mock_lookup:
         mock_lookup.return_value = (None, None)
 
         # Simulate user entering a label
@@ -715,7 +715,7 @@ def test_record_form_type_change_triggers_lookup():
     form._last_lookup_type = "A"
 
     # Mock dns_lookup_label_with_type to simulate finding an AAAA record
-    with patch("tuneup_alpha.dns_lookup.dns_lookup_label_with_type") as mock_lookup:
+    with patch("tuneup_alpha.tui_forms.dns_lookup_label_with_type") as mock_lookup:
         mock_lookup.return_value = "2001:db8::1"
 
         # Simulate user changing type from "A" to "AAAA"
@@ -756,7 +756,7 @@ def test_record_form_label_and_type_change_together():
     form._error = info_static
 
     # Mock dns_lookup_label_with_type to simulate finding an MX record
-    with patch("tuneup_alpha.dns_lookup.dns_lookup_label_with_type") as mock_lookup:
+    with patch("tuneup_alpha.tui_forms.dns_lookup_label_with_type") as mock_lookup:
         mock_lookup.return_value = "10 mail.example.com"
 
         # Simulate user entering label and type
